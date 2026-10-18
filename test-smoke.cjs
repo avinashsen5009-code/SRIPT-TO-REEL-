@@ -1,6 +1,6 @@
 const {JSDOM,VirtualConsole}=require('jsdom');
 const fs=require('fs'),assert=require('assert');
-const html=fs.readFileSync('index.html','utf8');
+const html=fs.readFileSync('index.html','utf8').replace('<script src="reel-renderer-minimalism.js"></script>','<script>'+fs.readFileSync('reel-renderer-minimalism.js','utf8')+'</script>');
 const vc=new VirtualConsole(),errors=[];vc.on('jsdomError',e=>errors.push(e));
 class Ctx {
  constructor(){this.canvas={width:720,height:1280}}
@@ -34,16 +34,40 @@ const w=dom.window,script=['What if a small habit changes your day?','The proble
  assert(w.document.querySelector('#js').value!==before);
  w.document.querySelector('#direction').value='graphics';w.document.querySelector('#direction').dispatchEvent(new w.Event('change'));
  assert.equal(w.eval('snap().direction'),'graphics');
+ // Selected reel style must reach the shared preview renderer, not just CSS.
+ const sty=w.document.querySelector('#sty');sty.value='structural';sty.dispatchEvent(new w.Event('change'));
+ assert.equal(w.eval('UI.sty'),'structural');
+ assert.equal(JSON.parse(w.document.querySelector('#js').value).reelStyle,'structural');
+ let charcoalPaints=0;Ctx.prototype.fillRect=function(){if(this.fillStyle==='#111111')charcoalPaints++};
+ w.eval('drawPrev(2)');
+ assert(charcoalPaints>0,'structural canvas rendering was not selected');
+ const assets=w.eval('({library:LIB,concepts:CONCEPTS,scenes:SC})');
+ assert.equal(w.StructuralReel.resolve('phone','',assets).tier,'library');
+ assert.equal(w.StructuralReel.resolve('connect','',assets).tier,'procedural');
+ assert.equal(w.StructuralReel.resolve('hope','',assets).tier,'type');
+ assert.equal(w.StructuralReel.resolve('the','',assets).tier,'type');
+ assert.equal(w.StructuralReel.resolve('35','',assets).shape,'number');
+ let marked=0;Ctx.prototype.fillText=function(v){if(String(v).trim())marked++};
+ const times=w.eval('tl.flatMap(ch=>ch.flatMap(c=>c.words.map(x=>x.s+.01)))');
+ for(const at of times){const before=marked;w.drawPrev(at);assert(marked>before,'empty word marker at '+at)}
+ assert(times.length>25);
  // Simulate a user-owned image and project reopen without decoding audio in jsdom.
  w.URL.createObjectURL=()=> 'blob:mock';w.URL.revokeObjectURL=()=>{};
  w.eval('setMedia(1,new File(["pixels"],"owned.png",{type:"image/png"}))');
  const saved=w.eval('snap()');assert.equal(saved.mediaFiles[1].name,'owned.png');
+ Object.defineProperty(w.eval('media[1].el'),'naturalWidth',{value:500});
+ Object.defineProperty(w.eval('media[1].el'),'naturalHeight',{value:500});
+ let mediaPaints=0;const owned=w.eval('media[1].el');Ctx.prototype.drawImage=function(el){if(el===owned)mediaPaints++};
+ w.document.querySelector('#direction').value='footage';w.eval('sceneCfg(1).treatment="media"');w.drawPrev(5);assert(mediaPaints>0,'user media was not rendered');
+ w.eval('sceneCfg(1).treatment="flow"');w.document.querySelector('#direction').value='graphics';
  w.eval('loadFile=async()=>{}');saved.voice={test:true};
  w.eval('REEL_SETTINGS.scenes=[];window.OVR.length=0');
  await w.openProj(saved);
  assert.equal(w.eval('sceneCfg(1).treatment'),'flow');
  assert.equal(w.eval('media[1].file.name'),'owned.png');
  assert.equal(w.document.querySelector('#direction').value,'graphics');
+ assert.equal(w.eval('UI.sty'),'structural');
+ assert.equal(w.eval('snap().sty'),'structural');
  assert.equal(errors.length,0,errors.map(x=>x.stack).join('\n'));
- console.log('PASS: 6 narrative purposes, scene JSON, controls, canvas paths, move persistence, direction preference, media snapshot/reopen');
+ console.log('PASS: 6 narrative purposes, scene JSON, controls, canvas paths, move persistence, direction preference, structural word-tier/canvas coverage, owned-media paint, snapshot/reopen');
 }catch(e){console.error(e.stack);process.exitCode=1}finally{dom.window.close()}})()

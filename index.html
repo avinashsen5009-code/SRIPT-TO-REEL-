@@ -88,11 +88,12 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 #cues button.sp{padding:0 6px;min-width:28px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<link rel="stylesheet" href="structural-minimalism.css">
 </head>
 <body>
-<main>
+<main class="minimalist-canvas-bg">
 <header>
-<h1>Reel Studio</h1>
+<h1 class="kinetic-reveal is-visible">Reel Studio</h1>
 <p>Upload your voiceover. The page writes the transcript with word timings, then animates a stickman and motion graphics for every phrase and exports the video.</p>
 </header>
 
@@ -114,7 +115,7 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 <label>Handle on video (optional)
 <input type="text" id="hd" placeholder="@yourname"></label>
 <label>Reel style
-<select id="sty" class="big"><option value="sketch" selected>Hand-drawn sketch: chalk stickman + trending cuts (new)</option><option value="trend">Trending: big word captions, punch cuts</option><option value="classic">Classic: small captions</option></select></label>
+<select id="sty" class="big"><option value="sketch" selected>Hand-drawn sketch: chalk stickman + trending cuts (new)</option><option value="trend">Trending: big word captions, punch cuts</option><option value="classic">Classic: small captions</option><option value="structural">Structural minimalism: charcoal grid + precise vector motion</option></select></label>
 </div>
 <div class="bar"><label>Visual direction <select id="direction" class="big"><option value="balanced">Balanced</option><option value="stickman">Stickman-forward</option><option value="graphics">Motion-graphics-forward</option><option value="footage">Footage-forward</option></select></label></div>
 <p class="mute" id="st" role="status">Paste your script, upload the voiceover, then press Build reel from script. No internet needed.</p>
@@ -157,7 +158,7 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 
 <div class="grid">
 <div class="pvbox">
-<div id="pvw"><canvas id="pv" aria-label="Reel preview"></canvas><div id="safe" aria-hidden="true"></div></div>
+<div id="pvw" class="vector-trace"><canvas id="pv" aria-label="Reel preview"></canvas><div id="safe" aria-hidden="true"></div></div>
 <div class="bar" style="justify-content:center"><select id="res" class="big" style="width:auto" aria-label="Export size"><option value="1">720×1280</option><option value="1.5">1080×1920 Full HD</option></select><button id="ex" type="button" class="pri">Export video</button><button id="srt" type="button">Captions (.srt)</button><button id="vtt" type="button">Captions (.vtt)</button></div>
 <p class="mute" id="es" role="status" style="text-align:center"></p>
 </div>
@@ -198,6 +199,7 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 </section>
 </main>
 
+<script src="reel-renderer-minimalism.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const SAMPLE="क्या एक छोटी आदत आपका दिन बदल सकती है?\nसमस्या यह है कि हम हर बार प्रेरणा का इंतज़ार करते हैं।\nजब आप फोन उठाते हैं, पुरानी आदत अपने आप शुरू हो जाती है।\nइसके बजाय किताब को मेज़ पर रखिए।\nपहला कदम: उसे खोलिए। दूसरा कदम: बस एक पेज पढ़िए।\nप्रेरणा का इंतज़ार करने के बजाय शुरुआत को आसान बनाइए।";
@@ -213,7 +215,8 @@ const PAL={
   cine:{bg:['#0A1118','#16283A'],acc:['#FFB347','#5ED3F3','#FF7A59','#B8F28C'],dark:'#0A1118'},
   neon:{bg:['#0B0B2B','#26104A'],acc:['#FF2E88','#00E5FF','#FFD60A','#7CFF4D'],dark:'#0B0B1E'},
   gold:{bg:['#0A0A0A','#1D1606'],acc:['#FFD60A','#FF9F0A','#FFFFFF'],dark:'#111111'},
-  fire:{bg:['#1A0505','#3A0D0D'],acc:['#FF4D2E','#FFC300','#FFFFFF'],dark:'#1A0505'}
+  fire:{bg:['#1A0505','#3A0D0D'],acc:['#FF4D2E','#FFC300','#FFFFFF'],dark:'#1A0505'},
+  structural:{bg:['#111111','#111111'],acc:['#F7F4FF','#CBC6D0','#E4DFE9','#AAA5B0'],dark:'#111111'}
 };
 let ac,buf,src=null,sents=[],cuts=[],cands=[],vs=0,ve=0,playing=false,t0=0,off=0,stopAt=null,peaks=null,drag=-1,lastIdx=-2;
 let tplPick=[],tl=[],bt=[],mediaDest=null,rec=null,exporting=false,env=null,autoW=null,busy=false,tick=null,media=[],vidIdx=-1,runId=0,abRun=0,asr=null,asrKey='',TR=null;
@@ -518,7 +521,7 @@ function renderList(){
 }
 function json(){
   if(!buf||!sents.length){$('#js').value='';return}
-  $('#js').value=JSON.stringify({audioDuration:+buf.duration.toFixed(3),wordsEstimated:!autoW,scenes:sents.map((s,i)=>{
+  $('#js').value=JSON.stringify({audioDuration:+buf.duration.toFixed(3),reelStyle:$('#sty').value,wordsEstimated:!autoW,scenes:sents.map((s,i)=>{
     const [a,b]=bounds(i);
     return{id:i+1,text:s,start:+a.toFixed(3),end:+b.toFixed(3),layout:layoutOf(i),topic:tplOf(i),timing:timingKind(i),cues:(tl[i]||[]).map(x=>({start:+x.s.toFixed(3),end:+x.e.toFixed(3),text:x.words.map(o=>o.w).join(' ')})),visual:ready(media[i])?'user media':'built-in graphics',direction:$('#direction').value,plan:scenePlan(i),override:(window.OVR||[])[i]||null,sceneControl:(window.REEL_SETTINGS?.scenes||[])[i]||null,
       words:wordsT(i).map(o=>({w:o.w,start:+o.s.toFixed(3),end:+o.e.toFixed(3)}))};
@@ -563,6 +566,7 @@ const txt=(c,s,x,y,px,fill)=>{c.font='700 '+px+'px '+HF;c.textAlign='center';c.t
 
 /* ---- background ---- */
 function stageBg(c,P,t,col){
+  if(minimal()){StructuralReel.background(c);return}
   const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,P.bg[0]);g.addColorStop(1,P.bg[1]);
   c.fillStyle=g;c.fillRect(-120,-120,W+240,H+240);
   const rg=c.createRadialGradient(360,400,40,360,400,470);rg.addColorStop(0,hexA(col,.34));rg.addColorStop(1,hexA(col,0));
@@ -581,6 +585,7 @@ function stageBg(c,P,t,col){
 }
 let VGC=null;
 function finish(c){
+  if(minimal()){StructuralReel.grain(c);return}
   if(!VGC){VGC=document.createElement('canvas');VGC.width=W;VGC.height=H;const g=VGC.getContext('2d'),vg=g.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.74);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.45)');g.fillStyle=vg;g.fillRect(0,0,W,H)}
   c.drawImage(VGC,0,0,W,H);
   c.fillStyle='rgba(255,255,255,.05)';
@@ -963,11 +968,12 @@ function drawDirected(c,i,t,P,col,onMedia=false){
  c.restore();
 }
 $('#direction').onchange=()=>{renderList();json();frame()};
+window.addEventListener('structural-asset-ready',()=>{if(minimal()&&!playing&&!exporting)frame()});
 
 /* captions: see drawCap (one renderer for every style, driven by the Captions panel) */
 function drawPrev(t){
-  const c=px;c.setTransform(K,0,0,K,0,0);HF=sk()?HFS:HF0;c.globalAlpha=1;c.shadowColor='transparent';c.textBaseline='alphabetic';
-  const P=PAL[UI.th]||PAL.cine;
+  const c=px;c.setTransform(K,0,0,K,0,0);HF=sk()?HFS:minimal()?'"Iowan Old Style","Baskerville",Georgia,'+HF0:HF0;c.globalAlpha=1;c.shadowColor='transparent';c.textBaseline='alphabetic';
+  const P=minimal()?PAL.structural:PAL[UI.th]||PAL.cine;
   if(!buf||!sents.length){
     stageBg(c,P,t,P.acc[0]);c.fillStyle='#fff';c.font='700 46px '+HF;c.textAlign='center';
     c.fillText(busy?'Transcribing…':'Upload your voiceover',W/2,H/2);finish(c);return;
@@ -977,23 +983,25 @@ function drawPrev(t){
   let bi=0;bs.forEach((x,k)=>{if(t>=x.s)bi=k});const B=bs[bi];
   let ci=0;ch.forEach((x,k)=>{if(t>=x.s)ci=k});const C=ch[ci],ct=C?t-C.s:9;
   const col=P.acc[(B?B.g:i)%P.acc.length],blt=B?Math.max(0,t-B.s):lt,bdur=B?Math.max(.4,B.e-B.s):1,bp=Math.min(1,blt/bdur),e=envAt(t);
-  const dir=B&&B.flip?-1:1,legacy=mus||!!(window.OVR||[])[i],punch=legacy?1.03+(trend()?.15:.07)*Math.exp(-blt*9)+.05*bp:1.01+.015*p,sh=legacy?Math.exp(-lt*12)*8:0;
+  const dir=B&&B.flip?-1:1,legacy=mus||!!(window.OVR||[])[i],punch=minimal()?1+.008*p:legacy?1.03+(trend()?.15:.07)*Math.exp(-blt*9)+.05*bp:1.01+.015*p,sh=legacy&&!minimal()?Math.exp(-lt*12)*8:0;
   c.save();
-  c.translate(W/2+Math.sin(lt*90)*sh+dir*(bp-.5)*26,H/2+Math.cos(lt*70)*sh*.6);c.scale(punch,punch);c.translate(-W/2,-H/2);
-  if(ready(M)&&sceneLayer(i,'media')&&(sceneCfg(i).treatment==='media'||sceneCfg(i).treatment==='auto'&&['balanced','footage'].includes($('#direction').value))) {broll(c,M,p,i,col,P,t);drawDirected(c,i,t,P,col,true)}
+  c.translate(W/2+Math.sin(lt*90)*sh+(minimal()?0:dir*(bp-.5)*26),H/2+Math.cos(lt*70)*sh*.6);c.scale(punch,punch);c.translate(-W/2,-H/2);
+  if(minimal())StructuralReel.renderScene(c,{time:t,start:a,end:b,text:sents[i],words:ch.flatMap(x=>x.words),media:M,
+    treatment:sceneCfg(i).treatment,direction:$('#direction').value,layers:sceneCfg(i).layers,pin:(window.OVR||[])[i],
+    amplitude:e,assets:{library:LIB,concepts:CONCEPTS,scenes:SC,stageFit},palette:P});
+  else if(ready(M)&&sceneLayer(i,'media')&&(sceneCfg(i).treatment==='media'||sceneCfg(i).treatment==='auto'&&['balanced','footage'].includes($('#direction').value))) {broll(c,M,p,i,col,P,t);drawDirected(c,i,t,P,col,true)}
   else if(mus&&AIV[i]&&AIV[i].ok)aiDraw(c,i,t,P,col);
   else if((window.OVR||[])[i]){if(sk())sketchScene(c,B,blt,t,col,P,e);else{stageBg(c,P,t,col);if(B)stageFit(c,B.scene,blt,t,col,P,e,B.flip,B.txt)}}
   else drawDirected(c,i,t,P,col);
   c.restore();
   if(legacy&&trend()&&bi>0){c.fillStyle='rgba(255,255,255,'+(.4*Math.exp(-blt*16)).toFixed(3)+')';c.fillRect(0,0,W,H)}
-  const sg=c.createLinearGradient(0,600,0,H);sg.addColorStop(0,'rgba(0,0,0,0)');sg.addColorStop(1,'rgba(0,0,0,.5)');
-  c.fillStyle=sg;c.fillRect(0,600,W,H-600);
-  if(!mus)drawCap(c,C,t,ct,col,P);
+  if(!minimal()){const sg=c.createLinearGradient(0,600,0,H);sg.addColorStop(0,'rgba(0,0,0,0)');sg.addColorStop(1,'rgba(0,0,0,.5)');c.fillStyle=sg;c.fillRect(0,600,W,H-600)}
+  if(!mus){if(minimal())StructuralReel.caption(c,{cue:C,time:t,config:CAP,hits:CAPHIT,safe:SAFE});else drawCap(c,C,t,ct,col,P)}
   const n=sents.length,gap=6,w=(W-80-gap*(n-1))/n;
   for(let k=0;k<n;k++){
-    const x=40+k*(w+gap);c.fillStyle='rgba(255,255,255,.28)';rr(c,x,56,w,8,4);c.fill();
+    const x=40+k*(w+gap);c.fillStyle='rgba(255,255,255,.28)';rr(c,x,56,w,8,minimal()?1:4);c.fill();
     const fw=k<i?1:k===i?p:0;
-    if(fw>0){c.fillStyle='#FFFFFF';rr(c,x,56,Math.max(8,w*fw),8,4);c.fill()}
+    if(fw>0){c.fillStyle='#FFFFFF';rr(c,x,56,Math.max(8,w*fw),8,minimal()?1:4);c.fill()}
   }
   const hd=UI.hd;
   if(hd){
@@ -1001,15 +1009,15 @@ function drawPrev(t){
     c.fillStyle=col;c.beginPath();c.arc(54,106,10,0,7);c.fill();c.fillStyle='#FFFFFF';c.fillText(hd,76,117);c.restore();
   }
   finish(c);
-  if(legacy&&B&&bi>0&&blt<.16){
+  if(legacy&&!minimal()&&B&&bi>0&&blt<.16){
     for(let k=0;k<6;k++){const y=240+k*95+((k*37)%40),x=(blt/.16)*(W+300)*dir-(dir>0?300:0)+(dir<0?W:0);c.fillStyle='rgba(255,255,255,'+(.5*(1-blt/.16))+')';c.fillRect(dir>0?x:x-260,y,260,4)}
   }
-  if(legacy&&i>0&&lt<.22){
+  if(legacy&&!minimal()&&i>0&&lt<.22){
     c.fillStyle=col;
     if(tr>=3){skTr(c,tr,lt)}else if(tr===0){const x=W*(lt/.2);c.fillRect(x,0,W-x,H)}
     else if(tr===1){for(let k=0;k<8;k++){const d=Math.max(0,Math.min(1,(lt-k*.012)/.2)),h8=H/8;if(k%2)c.fillRect(0,k*h8,W*(1-d),h8+1);else c.fillRect(W*d,k*h8,W*(1-d),h8+1)}}
   }
-  if(legacy&&i>0&&lt<.09){c.fillStyle='rgba(255,255,255,'+((tr===2?.8:.5)*(1-lt/.09))+')';c.fillRect(0,0,W,H)}
+  if(legacy&&!minimal()&&i>0&&lt<.09){c.fillStyle='rgba(255,255,255,'+((tr===2?.8:.5)*(1-lt/.09))+')';c.fillRect(0,0,W,H)}
 }
 
 let lastTm='',lastF=0,emaMs=8;
@@ -1218,9 +1226,9 @@ async function freeAll(){
 /* FREE END */
 /* ================= Hand-drawn sketch style + trending upgrades ================= */
 const UI={sty:'sketch',th:'cine',hd:''};
-const readUI=()=>{UI.sty=$('#sty').value;UI.th=$('#th').value;UI.hd=$('#hd').value.trim()};
+const readUI=()=>{UI.sty=$('#sty').value;UI.th=$('#th').value;UI.hd=$('#hd').value.trim();document.querySelector('main').classList.toggle('reel-structural-preview',UI.sty==='structural')};
 ['sty','th','hd'].forEach(id=>{const el=$('#'+id);el.addEventListener('input',readUI);el.addEventListener('change',readUI)});readUI();
-const sk=()=>UI.sty==='sketch',trend=()=>UI.sty!=='classic';
+const sk=()=>UI.sty==='sketch',minimal=()=>UI.sty==='structural',trend=()=>UI.sty!=='classic'&&UI.sty!=='structural';
 const SK={k:0,A:1.7};
 const nz2=(x,y,s)=>Math.sin(x*.043+s*1.9+y*.027)*Math.cos(y*.047-s*2.3+x*.021)+.35*Math.sin(x*.21+y*.17+s*4.1);
 const jx=(x,y)=>x+nz2(x,y,SK.k)*SK.A,jy=(x,y)=>y+nz2(y+31,x-17,SK.k+3)*SK.A;
@@ -1363,7 +1371,7 @@ function drawCap(c,C,t,ct,col,P){
   });
   c.restore();
 }
-$('#sty').onchange=()=>{if(document.fonts&&sk())document.fonts.load('700 60px Kalam','अA').then(frame);frame()};
+$('#sty').onchange=()=>{if(document.fonts&&sk())document.fonts.load('700 60px Kalam','अA').then(frame);json();frame()};
 
 /* ================= background music with auto-ducking ================= */
 let mbuf=null,mBlob=null,vBlob=null,msrc=null,dkc=null;
@@ -1409,7 +1417,7 @@ const dbq=async(m,...a)=>{const d=await DB();return new Promise((res,rej)=>{cons
 const snap=()=>({v:1,saved:Date.now(),script:$('#sc').value,th:$('#th').value,hd:$('#hd').value,sty:$('#sty').value,res:$('#res').value,mv:$('#mv').value,dk:$('#dk').checked,direction:$('#direction').value,sceneSettings:JSON.parse(JSON.stringify(window.REEL_SETTINGS?.scenes||[])),picks:(window.OVR||[]).slice(),mediaFiles:media.map(m=>m?.file||null),cuts:cuts.slice(),autoW,mus,voice:vBlob,music:mBlob,sents:sents.slice(),cap:{...CAP},safe:{...SAFE},cw:JSON.parse(JSON.stringify(CW))});
 async function listProj(){try{const k=await dbq('getAllKeys'),sel=$('#pp');sel.innerHTML='';k.forEach(n=>{const o=document.createElement('option');o.value=o.textContent=n;sel.appendChild(o)});return k}catch(e){pm('Saving is not available in this browser mode.');return[]}}
 async function openProj(p){
-  stop();applyCap(p.cap,p.safe);$('#sc').value=p.script||'';$('#th').value=p.th;$('#hd').value=p.hd||'';$('#sty').value=p.sty;$('#res').value=p.res||'1';$('#mv').value=p.mv;$('#dk').checked=p.dk!==false;$('#direction').value=p.direction||'balanced';if(window.REEL_SETTINGS)window.REEL_SETTINGS.scenes=p.sceneSettings||[];if(window.OVR){window.OVR.length=0;window.OVR.push(...(p.picks||[]))}
+  stop();applyCap(p.cap,p.safe);$('#sc').value=p.script||'';$('#th').value=p.th;$('#hd').value=p.hd||'';$('#sty').value=p.sty;$('#res').value=p.res||'1';$('#mv').value=p.mv;$('#dk').checked=p.dk!==false;$('#direction').value=p.direction||'balanced';readUI();if(window.REEL_SETTINGS)window.REEL_SETTINGS.scenes=p.sceneSettings||[];if(window.OVR){window.OVR.length=0;window.OVR.push(...(p.picks||[]))}
   if(p.music)await loadMusic(p.music);else{mbuf=null;mBlob=null;$('#ms').textContent=''}
   if(!p.voice){refresh();return}
   await loadFile(p.voice);
@@ -1849,6 +1857,12 @@ function capFile(kind){
 $c('srt').onclick=()=>capFile('srt');$c('vtt').onclick=()=>capFile('vtt');
 window.cueList=cueList;
 syncUI();
+})();
+</script>
+<script>
+(()=>{const targets=document.querySelectorAll('main.minimalist-canvas-bg .kinetic-reveal, main.minimalist-canvas-bg .vector-trace');if(!targets.length)return;
+ if(!('IntersectionObserver' in window)){targets.forEach(el=>el.classList.add('is-visible'));return}
+ const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}})},{threshold:.1});targets.forEach(el=>observer.observe(el));
 })();
 </script>
 </body>

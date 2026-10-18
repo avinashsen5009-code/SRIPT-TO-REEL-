@@ -1,4 +1,4 @@
-const C='reel-v11',P=['./','index.html','manifest.json','icon.svg','fonts/fonts.css'];
+const C='reel-v13',P=['./','index.html','structural-minimalism.css','reel-renderer-minimalism.js','manifest.json','icon.svg','fonts/fonts.css'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
 const c=await caches.open(C);
 await Promise.all(P.map(u=>c.add(u).catch(()=>{})));

@@ -1,0 +1,154 @@
+:root {
+  --bg-dark-charcoal: #111111;
+  --text-primary-white: #F7F4FF;
+  --accent-glow-subtle: rgba(247, 244, 255, 0.03);
+  --grid-line-color: rgba(247, 244, 255, 0.05);
+  --easing-premium: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Applied only to the existing editor wrapper. No component hierarchy changes. */
+body:has(main.minimalist-canvas-bg) { background: var(--bg-dark-charcoal); }
+main.minimalist-canvas-bg {
+  --bg: #111111;
+  --surf: #181818;
+  --ink: #F7F4FF;
+  --mute: #A7A4AD;
+  --line: var(--grid-line-color);
+  --acc: #F7F4FF;
+  --accink: #111111;
+  --wave: #D8D2E2;
+  color: var(--text-primary-white);
+  background-color: var(--bg-dark-charcoal);
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 39px, var(--grid-line-color) 39px 40px),
+    repeating-linear-gradient(90deg, transparent 0 39px, var(--grid-line-color) 39px 40px);
+  min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+}
+main.minimalist-canvas-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='17' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23n)' opacity='.48'/%3E%3C/svg%3E");
+}
+main.minimalist-canvas-bg header h1,
+main.minimalist-canvas-bg h2,
+main.minimalist-canvas-bg .card > summary,
+main.minimalist-canvas-bg #cap > summary {
+  font-family: "Iowan Old Style", "Baskerville", "Times New Roman", Georgia, serif;
+  color: var(--text-primary-white);
+  letter-spacing: -.025em;
+}
+main.minimalist-canvas-bg header h1 { font-size: clamp(32px, 4.5vw, 48px); line-height: 1.08; }
+main.minimalist-canvas-bg .card,
+main.minimalist-canvas-bg #wv,
+main.minimalist-canvas-bg #pv,
+main.minimalist-canvas-bg textarea,
+main.minimalist-canvas-bg input,
+main.minimalist-canvas-bg select,
+main.minimalist-canvas-bg button,
+main.minimalist-canvas-bg .file,
+main.minimalist-canvas-bg #cues .cue,
+main.minimalist-canvas-bg #cues input.w,
+main.minimalist-canvas-bg #cues .ch input {
+  border-radius: 2px;
+  border-width: 1px;
+  border-color: var(--grid-line-color);
+}
+main.minimalist-canvas-bg .card {
+  background: rgba(19, 19, 19, .96);
+  box-shadow: none;
+  padding-block: max(18px, 1.5vw);
+}
+main.minimalist-canvas-bg button,
+main.minimalist-canvas-bg .file,
+main.minimalist-canvas-bg select,
+main.minimalist-canvas-bg textarea,
+main.minimalist-canvas-bg input:not([type="color"]) {
+  transition: background .35s var(--easing-premium), border-color .35s var(--easing-premium), transform .35s var(--easing-premium);
+}
+main.minimalist-canvas-bg button:hover:not(:disabled),
+main.minimalist-canvas-bg select:hover { border-color: rgba(247, 244, 255, .32); background-color: #202020; }
+main.minimalist-canvas-bg button.pri:hover:not(:disabled) { background: #DFDAE7; color: #111; }
+main.minimalist-canvas-bg .pvbox #pv { box-shadow: 0 18px 48px rgba(0, 0, 0, .28); }
+main.minimalist-canvas-bg.reel-structural-preview .pvbox #pv { outline: 1px solid rgba(247,244,255,.38); outline-offset: 3px; }
+
+/* Single-line heading reveal: the heading itself is the masked line, so no text nodes are split. */
+main.minimalist-canvas-bg .kinetic-reveal { display: inline-block; overflow: hidden; clip-path: inset(0 0 100% 0); transform: translateY(18px); opacity: 0; }
+main.minimalist-canvas-bg .kinetic-reveal.is-visible {
+  clip-path: inset(0 0 0 0);
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform .8s var(--easing-premium), clip-path .8s var(--easing-premium), opacity .65s ease-out;
+}
+/* Utility for inline SVG strokes; used only where an actual SVG is present. */
+main.minimalist-canvas-bg .vector-trace path,
+main.minimalist-canvas-bg .vector-trace line,
+main.minimalist-canvas-bg .vector-trace rect {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  transition: stroke-dashoffset 1.1s var(--easing-premium);
+}
+main.minimalist-canvas-bg .vector-trace.is-visible path,
+main.minimalist-canvas-bg .vector-trace.is-visible line,
+main.minimalist-canvas-bg .vector-trace.is-visible rect { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) {
+  main.minimalist-canvas-bg .kinetic-reveal { clip-path: none; transform: none; opacity: 1; }
+  main.minimalist-canvas-bg .kinetic-reveal.is-visible,
+  main.minimalist-canvas-bg .vector-trace * { transition: none; stroke-dashoffset: 0; }
+}
+/* Existing preview wrapper doubles as a traced technical boundary. */
+main.minimalist-canvas-bg #pvw.vector-trace::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    linear-gradient(var(--text-primary-white),var(--text-primary-white)) left top / 0% 1px no-repeat,
+    linear-gradient(var(--text-primary-white),var(--text-primary-white)) right top / 1px 0% no-repeat,
+    linear-gradient(var(--text-primary-white),var(--text-primary-white)) right bottom / 0% 1px no-repeat,
+    linear-gradient(var(--text-primary-white),var(--text-primary-white)) left bottom / 1px 0% no-repeat;
+  opacity: .28;
+  transition: background-size 1.05s var(--easing-premium);
+}
+main.minimalist-canvas-bg #pvw.vector-trace.is-visible::before {
+  background-size: 100% 1px, 1px 100%, 100% 1px, 1px 100%;
+}
+main.minimalist-canvas-bg .card:hover { box-shadow: 0 0 0 1px var(--accent-glow-subtle); }
+@media (prefers-reduced-motion: reduce) {
+  main.minimalist-canvas-bg #pvw.vector-trace::before { transition: none; background-size: 100% 1px, 1px 100%, 100% 1px, 1px 100%; }
+}
+/* Mobile-first refinements; the original grid/order and controls remain intact. */
+main.minimalist-canvas-bg,
+main.minimalist-canvas-bg .grid,
+main.minimalist-canvas-bg .side,
+main.minimalist-canvas-bg .card,
+main.minimalist-canvas-bg .bar > * { min-width: 0; }
+main.minimalist-canvas-bg .card { overflow-wrap: anywhere; }
+main.minimalist-canvas-bg #ls .rw select { min-width: min(145px, 100%); }
+@media (max-width: 759px) {
+  main.minimalist-canvas-bg { width: 100%; padding: 14px 12px calc(24px + env(safe-area-inset-bottom)); gap: 12px; }
+  main.minimalist-canvas-bg .card { padding: 14px; }
+  main.minimalist-canvas-bg .grid { grid-template-columns: minmax(0,1fr); }
+  main.minimalist-canvas-bg .bar button { flex: 1 1 calc(50% - 8px); }
+  main.minimalist-canvas-bg .bar .file { flex: 1 1 100%; }
+  main.minimalist-canvas-bg #pvw { width: min(100%, 350px); }
+  main.minimalist-canvas-bg #pv { width: 100%; height: auto; }
+  main.minimalist-canvas-bg #ls .rw select { flex: 1 1 46%; max-width: none; }
+  main.minimalist-canvas-bg #ls .rw button { flex: 1 1 auto; }
+  main.minimalist-canvas-bg #cues { max-height: 55vh; }
+}
+@media (max-width: 390px) {
+  main.minimalist-canvas-bg .bar button { flex-basis: 100%; }
+  main.minimalist-canvas-bg .row { grid-template-columns: minmax(0,1fr); }
+  main.minimalist-canvas-bg #ls .rw select { flex-basis: 100%; }
+}
+
+@keyframes reel-headline-reveal { from { clip-path: inset(0 0 100% 0); transform: translateY(18px); opacity: 0; } to { clip-path: inset(0 0 0 0); transform: translateY(0); opacity: 1; } }
+main.minimalist-canvas-bg header h1.kinetic-reveal.is-visible { animation: reel-headline-reveal .8s var(--easing-premium) both; }
+@media (prefers-reduced-motion: reduce) { main.minimalist-canvas-bg header h1.kinetic-reveal.is-visible { animation: none; } }
