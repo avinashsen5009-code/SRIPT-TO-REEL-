@@ -17,3 +17,11 @@ The site now works free and unlimited: scenes are drawn from a built-in vector l
 Reel style: Trending (big word-by-word captions, punch zoom and flash cuts) or Classic.
 
 Music mode: upload a song with no script and press "Music mode (beat cuts)". Export now renders MP4 faster than real time in Chrome/Edge, and falls back to real-time recording if needed.
+
+## New in this version
+- **Hand-drawn sketch style** (default Reel style): chalk stickman with pencil-wobble lines, chalk grain, handwritten captions (Kalam, Hindi + English), marker highlight on keywords, handwritten labels with arrows that write themselves on, sticker pops, and chalk zig-zag cuts. The other styles and the whole icon library are unchanged.
+- **1080x1920 export** toggle next to Export video (720x1280 stays the default).
+- **Background music** with auto-ducking under the voice (also in the exported file).
+- **Projects**: Save / Open / Delete inside the browser (IndexedDB). Stores script, settings, scene cuts, voiceover and music. Works offline. Web photos and AI visuals are not stored.
+- **Offline fonts**: run `python3 fetch-fonts.py` once (needs internet), then commit the new `fonts/` folder. The service worker caches it.
+- More library topics (calendar, ads, star, search, trust, world, podcast) and a higher-contrast camera icon.

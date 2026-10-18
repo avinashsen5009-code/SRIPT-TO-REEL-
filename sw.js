@@ -1,5 +1,10 @@
-const C='reel-v6',P=['./','index.html','manifest.json','icon.svg'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(P)).then(()=>self.skipWaiting()))});
+const C='reel-v7',P=['./','index.html','manifest.json','icon.svg','fonts/fonts.css'];
+self.addEventListener('install',e=>{e.waitUntil((async()=>{
+const c=await caches.open(C);
+await Promise.all(P.map(u=>c.add(u).catch(()=>{})));
+try{const b=new URL('fonts/fonts.css',location.href),r=await fetch(b);if(r.ok){const t=await r.text();
+await Promise.all([...t.matchAll(/url\(([^)]+)\)/g)].map(m=>c.add(new URL(m[1].replace(/["']/g,''),b).href).catch(()=>{})))}}catch(x){}
+self.skipWaiting()})())});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>clients.claim()))});
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);
 if(e.request.method!=='GET'||!(u.origin===location.origin||/fonts\.(googleapis|gstatic)\.com|cdn\.jsdelivr\.net/.test(u.host)))return;
