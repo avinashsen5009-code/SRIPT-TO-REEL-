@@ -34,3 +34,9 @@ Music mode: upload a song with no script and press "Music mode (beat cuts)". Exp
 
 ## Bundled speech model (no download for visitors)
 Run once with internet: `python3 fetch-model.py` then commit `vendor/` and `models/`. Auto-transcribe then loads everything from your own site. If the folders are missing it falls back to downloading from the internet as before.
+
+## v10: captions (Phase 1)
+- Captions now sit at 58.5% of the frame height (adjustable 55–62%); visuals are composed above them.
+- **Captions & safe zones** panel: on/off, 1/2/3 words per cue, emphasis Off/Subtle/Strong, outline/shadow/backing, size, text and highlight colours, and preview-only 9:16 safe-zone guides (never exported).
+- Tap a caption word in the preview, or edit words in the cue list (Hindi, English, Hinglish, numerals). Split/merge cues and edit cue start/end times. Each scene is labelled aligned, estimated or edited.
+- SRT and VTT export use the same cues as the preview. Projects save caption settings and edits.
