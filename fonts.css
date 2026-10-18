@@ -1,0 +1,8 @@
+/* Bundled Google Fonts (SIL OFL): see hind-OFL.txt and kalam-OFL.txt. */
+@font-face{font-family:Hind;src:url(hind-400.ttf) format('truetype');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:Hind;src:url(hind-500.ttf) format('truetype');font-style:normal;font-weight:500;font-display:swap}
+@font-face{font-family:Hind;src:url(hind-600.ttf) format('truetype');font-style:normal;font-weight:600;font-display:swap}
+@font-face{font-family:Hind;src:url(hind-700.ttf) format('truetype');font-style:normal;font-weight:700;font-display:swap}
+@font-face{font-family:Kalam;src:url(kalam-400.ttf) format('truetype');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:Kalam;src:url(kalam-700.ttf) format('truetype');font-style:normal;font-weight:700;font-display:swap}
+@font-face{font-family:Lora;src:url(lora-variable.ttf) format('truetype');font-style:normal;font-weight:400 700;font-display:swap}

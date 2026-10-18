@@ -1,8 +1,8 @@
-const C='reel-v23',P=['./','index.html','structural-minimalism.css','editor-sheets.css','reel-renderer-minimalism.js','reel-director.js','visual-grammar.js','story-director.js','story-style.js','manifest.json','icon.svg','fonts/fonts.css'];
+const C='reel-v24',P=['./','index.html','structural-minimalism.css','editor-sheets.css','reel-renderer-minimalism.js','reel-director.js','visual-grammar.js','story-director.js','story-style.js','manifest.json','icon.svg','fonts.css'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
 const c=await caches.open(C);
 await Promise.all(P.map(u=>c.add(u).catch(()=>{})));
-try{const b=new URL('fonts/fonts.css',location.href),r=await fetch(b);if(r.ok){const t=await r.text();
+try{const b=new URL('fonts.css',location.href),r=await fetch(b);if(r.ok){const t=await r.text();
 await Promise.all([...t.matchAll(/url\(([^)]+)\)/g)].map(m=>c.add(new URL(m[1].replace(/["']/g,''),b).href).catch(()=>{})))}}catch(x){}
 self.skipWaiting()})())});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>clients.claim()))});
