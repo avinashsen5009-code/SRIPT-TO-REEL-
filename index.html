@@ -49,6 +49,18 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 #ls .rw select{flex:1;font:500 13px Hind,sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;min-height:40px;padding:0 8px}
 #ls .rw button{min-height:40px;padding:0 10px;font-size:13px}
 input[type=range]{width:100%;accent-color:var(--acc)}
+
+/* v8 polish */
+.pvbox{position:sticky;top:12px}
+@media(max-width:759px){.pvbox{position:static}}
+button{transition:transform .08s,background .15s,border-color .15s}
+button:not(:disabled):hover{border-color:var(--wave)}button:not(:disabled):active{transform:scale(.97)}
+button.pri:not(:disabled):hover{filter:brightness(1.07)}
+#ls .rw .vsel{max-width:46%}
+#ls li.chosen button.sc{border-left-color:var(--wave)}
+.kbd{font:600 11px ui-monospace,monospace;background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+#pv{box-shadow:0 14px 40px rgba(0,0,0,.28);will-change:contents}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
@@ -97,7 +109,7 @@ input[type=range]{width:100%;accent-color:var(--acc)}
 <div style="display:grid;gap:10px;margin-top:10px">
 <div class="row">
 <label>Speech model
-<select id="md" class="big"><option value="base">Fast (base, about 80 MB)</option><option value="small" selected>Accurate (small, about 250 MB, slower)</option></select></label>
+<select id="md" class="big"><option value="base">Fast (base, lower accuracy)</option><option value="small" selected>Most accurate (small, bundled with the site: no download needed)</option></select></label>
 <label>Language
 <select id="lg" class="big"><option value="" selected>Auto detect</option><option value="hindi">Hindi</option><option value="english">English</option></select></label>
 </div>
@@ -272,6 +284,14 @@ function finishTranscript(chunks,seg){
   setSt('Done: '+ws.length+' words in '+sents.length+' scenes. Check the script box above, then press Export video.');
   refresh();freeAll();autoBroll();
 }
+/* Prefer the bundled copy (vendor/ + models/) so users download nothing; fall back to the CDN / Hugging Face if it is not there */
+let BUNDLED=false;
+async function loadTR(){
+  try{const m=await import('./vendor/transformers.min.js');
+    m.env.allowLocalModels=true;m.env.localModelPath=new URL('models/',location.href).href;
+    m.env.backends.onnx.wasm.wasmPaths=new URL('vendor/',location.href).href;BUNDLED=true;return m}catch(e){}
+  return await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6');
+}
 async function loadAsr(id,onProg){
   let last=null;
   for(const proxy of [true,false]){
@@ -291,7 +311,7 @@ async function transcribe(){
   tick=tk;
   const done=()=>{clearInterval(tk);if(my===runId){tick=null;busy=false;$('#tr').disabled=false;$('#cn').hidden=true;frame()}};
   try{
-    TR=TR||await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6');
+    TR=TR||await loadTR();
     const id='onnx-community/whisper-'+$('#md').value+'_timestamped',lang=$('#lg').value;
     if(!asr||asrKey!==id){
       phase='Loading speech model…';
@@ -573,11 +593,12 @@ function stageBg(c,P,t,col){
   c.fillStyle=fl;c.fillRect(-120,882,W+240,H-882);
   c.fillStyle='rgba(255,255,255,.4)';c.fillRect(-120,880,W+240,3);
 }
+let VGC=null;
 function finish(c){
-  const vg=c.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.74);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.45)');
-  c.fillStyle=vg;c.fillRect(0,0,W,H);
+  if(!VGC){VGC=document.createElement('canvas');VGC.width=W;VGC.height=H;const g=VGC.getContext('2d'),vg=g.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.74);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.45)');g.fillStyle=vg;g.fillRect(0,0,W,H)}
+  c.drawImage(VGC,0,0,W,H);
   c.fillStyle='rgba(255,255,255,.05)';
-  for(let k=0;k<70;k++)c.fillRect(Math.random()*W,Math.random()*H,2,2);
+  for(let k=0;k<24;k++)c.fillRect(Math.random()*W,Math.random()*H,2,2);
 }
 
 /* ---- stickman ---- */
@@ -906,7 +927,7 @@ function caption(c,C,t,ct,col,P){
 
 function drawPrev(t){
   const c=px;c.setTransform(K,0,0,K,0,0);HF=sk()?HFS:HF0;c.globalAlpha=1;c.shadowColor='transparent';c.textBaseline='alphabetic';
-  const P=PAL[$('#th').value]||PAL.cine;
+  const P=PAL[UI.th]||PAL.cine;
   if(!buf||!sents.length){
     stageBg(c,P,t,P.acc[0]);c.fillStyle='#fff';c.font='700 46px '+HF;c.textAlign='center';
     c.fillText(busy?'Transcribing…':'Upload your voiceover',W/2,H/2);finish(c);return;
@@ -921,7 +942,7 @@ function drawPrev(t){
   c.translate(W/2+Math.sin(lt*90)*sh+dir*(bp-.5)*26,H/2+Math.cos(lt*70)*sh*.6);c.scale(punch,punch);c.translate(-W/2,-H/2);
   if(ready(M))broll(c,M,p,i,col,P,t);
   else if(sk())sketchScene(c,B,blt,t,col,P,e);
-  else if($('#ai').checked&&AIV[i]&&AIV[i].ok)aiDraw(c,i,t,P,col);
+  else if(UI.ai&&AIV[i]&&AIV[i].ok)aiDraw(c,i,t,P,col);
   else{stageBg(c,P,t,col);if(B)stageFit(c,B.scene,blt,t,col,P,e,B.flip,B.txt)}
   c.restore();
   if(trend()&&bi>0){c.fillStyle='rgba(255,255,255,'+(.4*Math.exp(-blt*16)).toFixed(3)+')';c.fillRect(0,0,W,H)}
@@ -934,7 +955,7 @@ function drawPrev(t){
     const fw=k<i?1:k===i?p:0;
     if(fw>0){c.fillStyle='#FFFFFF';rr(c,x,56,Math.max(8,w*fw),8,4);c.fill()}
   }
-  const hd=$('#hd').value.trim();
+  const hd=UI.hd;
   if(hd){
     c.save();c.font='600 32px '+HF;c.textAlign='left';c.shadowColor='rgba(0,0,0,.6)';c.shadowBlur=10;
     c.fillStyle=col;c.beginPath();c.arc(54,106,10,0,7);c.fill();c.fillStyle='#FFFFFF';c.fillText(hd,76,117);c.restore();
@@ -951,12 +972,13 @@ function drawPrev(t){
   if(i>0&&lt<.09){c.fillStyle='rgba(255,255,255,'+((tr===2?.8:.5)*(1-lt/.09))+')';c.fillRect(0,0,W,H)}
 }
 
+let lastTm='',lastF=0,emaMs=8;
 function frame(){
   const t=playing?getT():off;drawWave(t);drawPrev(t);
-  $('#tm').textContent=buf?fmt(t)+' / '+fmt(buf.duration):'0.00s';
+  {const tt=buf?fmt(t)+' / '+fmt(buf.duration):'0.00s';if(tt!==lastTm){lastTm=tt;$('#tm').textContent=tt}}
   if(buf&&sents.length){
     const i=idxAt(t);
-    if(i!==lastIdx){const L=$('#ls').children;if(L[lastIdx]&&L[lastIdx].firstChild)L[lastIdx].firstChild.classList.remove('on');if(L[i]&&L[i].firstChild)L[i].firstChild.classList.add('on');lastIdx=i}
+    if(i!==lastIdx){const L=$('#ls').children;if(L[lastIdx]&&L[lastIdx].firstChild)L[lastIdx].firstChild.classList.remove('on');if(L[i]&&L[i].firstChild)L[i].firstChild.classList.add('on');const ol=$('#ls');if(!playing||ol.matches(':hover')===false)ol.scrollTop=Math.max(0,L[i].offsetTop-ol.clientHeight/3);lastIdx=i}
   }
 }
 function refresh(){buildTL();renderList();json();frame()}
@@ -981,7 +1003,9 @@ function loop(){
     if(exporting){stop(buf.duration-.01);setTimeout(finishExport,500)}else stop(0);
     return;
   }
-  frame();requestAnimationFrame(loop);
+  const now=performance.now();
+  if(!exporting&&!fxb&&emaMs>11&&now-lastF<30){requestAnimationFrame(loop);return}
+  lastF=now;frame();emaMs=emaMs*.9+(performance.now()-now)*.1;requestAnimationFrame(loop);
 }
 function seek(t){if(playing)play(t,stopAt);else{off=t;frame()}}
 const tAt=e=>{const r=wv.getBoundingClientRect();return Math.min(buf.duration,Math.max(0,(e.clientX-r.left)/r.width*buf.duration))};
@@ -1202,7 +1226,10 @@ async function freeAll(){
 }
 /* FREE END */
 /* ================= Hand-drawn sketch style + trending upgrades ================= */
-const sk=()=>$('#sty').value==='sketch',trend=()=>$('#sty').value!=='classic';
+const UI={sty:'sketch',th:'cine',hd:'',ai:false};
+const readUI=()=>{UI.sty=$('#sty').value;UI.th=$('#th').value;UI.hd=$('#hd').value.trim();UI.ai=$('#ai').checked};
+['sty','th','hd','ai'].forEach(id=>{const el=$('#'+id);el.addEventListener('input',readUI);el.addEventListener('change',readUI)});readUI();
+const sk=()=>UI.sty==='sketch',trend=()=>UI.sty!=='classic';
 const SK={k:0,A:1.7};
 const nz2=(x,y,s)=>Math.sin(x*.043+s*1.9+y*.027)*Math.cos(y*.047-s*2.3+x*.021)+.35*Math.sin(x*.21+y*.17+s*4.1);
 const jx=(x,y)=>x+nz2(x,y,SK.k)*SK.A,jy=(x,y)=>y+nz2(y+31,x-17,SK.k+3)*SK.A;
@@ -1234,13 +1261,14 @@ const LAY=document.createElement('canvas'),lx=LAY.getContext('2d');
   Object.defineProperty(c,'lineWidth',{get(){return d.get.call(c)},set(v){d.set.call(c,v*.82)}});
 })(lx);
 /* chalk grain tile */
+let GRP=null,GRP2=null;
 const GR=document.createElement('canvas');GR.width=GR.height=256;
 {const g=GR.getContext('2d'),d=g.createImageData(256,256);for(let i=0;i<d.data.length;i+=4){d.data[i]=d.data[i+1]=d.data[i+2]=255;d.data[i+3]=Math.random()<.28?60+Math.random()*150:0}g.putImageData(d,0,0)}
 function skBg(c,t,col){
   const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#10161B');g.addColorStop(1,'#1A2229');c.fillStyle=g;c.fillRect(-120,-120,W+240,H+240);
   const rg=c.createRadialGradient(360,520,30,360,520,470);rg.addColorStop(0,hexA(col,.15));rg.addColorStop(1,hexA(col,0));c.fillStyle=rg;c.fillRect(-120,-120,W+240,H+240);
   [[120,330,150],[600,760,190],[300,1000,170]].forEach(s=>{const q=c.createRadialGradient(s[0],s[1],5,s[0],s[1],s[2]);q.addColorStop(0,'rgba(255,255,255,.05)');q.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=q;c.fillRect(s[0]-s[2],s[1]-s[2],s[2]*2,s[2]*2)});
-  const k=Math.floor(t*8);c.save();c.translate((k*53)%256,(k*97)%256);c.globalAlpha=.1;c.fillStyle=c.createPattern(GR,'repeat');c.fillRect(-256,-256,W+512,H+512);c.restore();
+  const k=Math.floor(t*8);c.save();c.translate((k*53)%256,(k*97)%256);c.globalAlpha=.1;c.fillStyle=GRP2||(GRP2=c.createPattern(GR,'repeat'));c.fillRect(-256,-256,W+512,H+512);c.restore();
 }
 /* handwritten label + hand-drawn arrow pointing at the visual, written on progressively */
 function annot(L,B,blt,col){
@@ -1274,7 +1302,8 @@ function sketchScene(c,B,blt,t,col,P,e){
   if(LAY.width!==pv.width||LAY.height!==pv.height){LAY.width=pv.width;LAY.height=pv.height}
   const PS={...P,bg:['#10161B','#1A2229']},k=Math.floor(t*8);
   lx.setTransform(1,0,0,1,0,0);lx.clearRect(0,0,LAY.width,LAY.height);lx.setTransform(K,0,0,K,0,0);
-  for(let p=0;p<2;p++){            /* two slightly different passes = layered pencil lines */
+  const live=!(exporting||fxb);
+  for(let p=live?1:0;p<2;p++){   /* 2 layered pencil passes only for export; 1 in live preview = much faster */
     SK.k=k+p*41;lx.save();lx.globalAlpha=p?1:.5;
     lx.strokeStyle=INK;lx.lineWidth=5;lx.lineCap='round';lx.beginPath();lx.moveTo(30,880);lx.lineTo(690,880);lx.stroke();
     if(B)stageFit(lx,B.scene,blt,t,col,PS,e,B.flip,B.txt);
@@ -1282,7 +1311,7 @@ function sketchScene(c,B,blt,t,col,P,e){
     lx.restore();
   }
   lx.save();lx.setTransform(1,0,0,1,0,0);lx.globalCompositeOperation='destination-out';lx.translate((k*53)%256,(k*97)%256);
-  lx.fillStyle=lx.createPattern(GR,'repeat');lx.fillRect(-256,-256,LAY.width+256,LAY.height+256);lx.restore();   /* chalk erosion */
+  lx.fillStyle=GRP||(GRP=lx.createPattern(GR,'repeat'));lx.fillRect(-256,-256,LAY.width+256,LAY.height+256);lx.restore();   /* chalk erosion */
   c.drawImage(LAY,0,0,W,H);
 }
 /* extra transitions: iris (3), slash (4), chalk zig-zag wipe (5, sketch) */
@@ -1508,6 +1537,71 @@ sizeWave();frame();
 if(document.fonts&&document.fonts.load)['Hind','Kalam'].forEach(f=>document.fonts.load('700 100px '+f,'अA').then(frame));
 if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+
+<script>
+/* ===== v8: bigger library, per-scene choice, shortcuts, smarter button states ===== */
+(()=>{
+const grow=(c,r)=>{c.beginPath();for(let k=0;k<16;k++){const a=k*Math.PI/8,q=k%2?r*.82:r;c.lineTo(Math.cos(a)*q,Math.sin(a)*q)}c.closePath()};
+function P_gear(c,lt,t,col){c.lineJoin='round';c.save();c.translate(-50,-20);c.rotate(t*.9);grow(c,110);sfx(c,col,8);circ(c,0,0,42);sfx(c,'#14202E',7);c.restore();
+  c.save();c.translate(95,70);c.rotate(-t*1.35+.2);grow(c,64);sfx(c,'#4CC3CE',7);circ(c,0,0,24);sfx(c,'#14202E',6);c.restore()}
+function P_shield(c,lt,t,col){const s=1+.03*Math.sin(t*3);c.scale(s,s);c.lineJoin='round';c.lineCap='round';c.beginPath();c.moveTo(0,-130);c.lineTo(100,-95);c.bezierCurveTo(100,30,60,100,0,135);c.bezierCurveTo(-60,100,-100,30,-100,-95);c.closePath();sfx(c,col,9);
+  c.strokeStyle=INK;c.lineWidth=15;const k=Math.min(1,Math.max(0,(lt-.25)/.4));c.beginPath();c.moveTo(-42,0);if(k>0)c.lineTo(-42+28*Math.min(1,k*2),Math.min(1,k*2)*28);if(k>.5)c.lineTo(-14+66*(k-.5)*2,28-(k-.5)*2*66);c.stroke()}
+function P_cart(c,lt,t,col){c.lineJoin='round';c.lineCap='round';const b=Math.sin(t*6)*3;c.translate(0,b);c.beginPath();c.moveTo(-130,-95);c.lineTo(-95,-95);c.lineTo(-60,45);c.lineTo(95,45);c.lineTo(125,-45);c.lineTo(-82,-45);c.strokeStyle=INK;c.lineWidth=11;c.stroke();
+  c.beginPath();c.moveTo(-72,-40);c.lineTo(118,-40);c.lineTo(92,40);c.lineTo(-55,40);c.closePath();sfx(c,col,6);
+  [-35,75].forEach(x=>{circ(c,x,82,17);sfx(c,'#14202E',7)});const q=Math.min(1,lt/.3);c.fillStyle='#FFC93C';[[-20,-90],[30,-100],[75,-85]].forEach((o,k)=>{const y=o[1]-Math.abs(Math.sin(t*4+k))*14*q;rr(c,o[0]-16,y-16,32,32,8);sfx(c,'#FFC93C',6)})}
+function P_camera(c,lt,t,col){c.lineJoin='round';rr(c,-125,-70,250,160,24);sfx(c,'#2B3A4E',9);rr(c,-60,-100,70,36,10);sfx(c,'#2B3A4E',9);
+  circ(c,0,10,58);sfx(c,'#14202E',9);circ(c,0,10,36);sfx(c,'#4CC3CE',6);circ(c,-12,-2,9);c.fillStyle='#fff';c.fill();
+  circ(c,92,-44,9);c.fillStyle=lt%1<.5?col:'#fff';c.fill();const f=Math.exp(-((t*1.2)%2)*9);if(f>.02){c.fillStyle='rgba(255,255,255,'+f*.5+')';c.fillRect(-400,-400,800,800)}}
+function P_mail(c,lt,t,col){c.lineJoin='round';c.lineCap='round';const y=-Math.abs(Math.sin(t*3))*10;c.translate(0,y);rr(c,-130,-75,260,160,16);sfx(c,'#F4F7FB',9);
+  c.beginPath();c.moveTo(-126,-68);c.lineTo(0,18);c.lineTo(126,-68);c.strokeStyle='#14202E';c.lineWidth=9;c.stroke();circ(c,112,-78,26);sfx(c,'#FF5A5F',6);txt(c,String(1+Math.floor(t)%9),112,-77,30,'#fff')}
+Object.assign(SC,{gear:{pose:'point',prop:P_gear},shield:{pose:'up',prop:P_shield},cart:{pose:'cheer',prop:P_cart},camera:{pose:'hold',prop:P_camera},mail:{pose:'point',prop:P_mail}});
+CONCEPTS.push(['gear',['system','process','work','tool','automation','engine','सिस्टम','काम','प्रक्रिया','मशीन','setup']],
+ ['shield',['safe','secure','protect','security','safety','insurance','trust','सुरक्षा','सुरक्षित','बीमा','भरोसा','protection']],
+ ['cart',['buy','shop','sale','sell','order','price','discount','खरीद','बेच','दाम','सस्ता','ऑफर','offer','store']],
+ ['camera',['video','photo','camera','reel','content','record','shoot','वीडियो','फोटो','कैमरा','रील','कंटेंट']],
+ ['mail',['email','mail','message','inbox','notification','subscribe','मेल','मैसेज','सब्सक्राइब']]);
+
+/* blur shadows are the costliest canvas op; skip them in the live sketch preview (kept for export) */
+{const d=Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype,'shadowBlur');Object.defineProperty(lx,'shadowBlur',{get(){return d.get.call(lx)},set(v){d.set.call(lx,(exporting||fxb)?v:Math.min(v,6))}})}
+/* ---- per-scene visual: Auto by default, user can pin any library scene ---- */
+const OVR=[];window.OVR=OVR;
+const _bb=buildBeats;buildBeats=function(){_bb();bt.forEach((bs,i)=>{if(OVR[i])bs.forEach(b=>{b.scene=OVR[i]})})};
+const nice=id=>id.charAt(0).toUpperCase()+id.slice(1);
+const _rl=renderList;renderList=function(){_rl();
+  [...$('#ls').children].forEach((li,i)=>{const rw=li.querySelector('.rw');if(!rw)return;
+    const sel=document.createElement('select'),auto=(bt[i]&&bt[i][0])?layoutOf(i):'';sel.className='vsel';sel.setAttribute('aria-label','Visual for scene '+(i+1));
+    const o0=document.createElement('option');o0.value='';o0.textContent='Visual: Auto'+(OVR[i]?'':(auto?' ('+auto+')':''));sel.appendChild(o0);
+    Object.keys(SC).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=nice(k);sel.appendChild(o)});
+    sel.value=OVR[i]||'';if(OVR[i])li.classList.add('chosen');
+    sel.onchange=()=>{OVR[i]=sel.value||undefined;buildTL();renderList();json();frame()};rw.prepend(sel)})};
+/* a new script or audio changes scene count, so stale picks are cleared */
+$('#al').addEventListener('click',()=>{OVR.length=0},true);
+
+/* ---- keyboard: only when not typing ---- */
+addEventListener('keydown',e=>{
+  if(!buf||e.ctrlKey||e.metaKey||e.altKey||/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))&&e.target.type!=='range'&&e.target.type!=='checkbox')return;
+  const t=playing?getT():off,i=idxAt(t);
+  if(e.code==='Space'){e.preventDefault();playing?stop():play(off>=buf.duration-.05?0:off)}
+  else if(e.key==='ArrowLeft'){e.preventDefault();seek(Math.max(0,t-(e.shiftKey?5:1)))}
+  else if(e.key==='ArrowRight'){e.preventDefault();seek(Math.min(buf.duration-.05,t+(e.shiftKey?5:1)))}
+  else if(e.key==='['&&i>0){seek(bounds(i-1)[0])}
+  else if(e.key===']'&&i<sents.length-1){seek(bounds(i+1)[0])}
+});
+$('.wv-hint')||(()=>{const m=[...document.querySelectorAll('span.mute')].find(x=>/Drag a marker/.test(x.textContent));if(m)m.innerHTML+=' Keys: <span class="kbd">Space</span> play · <span class="kbd">←</span><span class="kbd">→</span> ±1s (Shift ±5s) · <span class="kbd">[</span><span class="kbd">]</span> scene'})();
+
+/* ---- buttons only live when they can work; nothing runs unless you press it ---- */
+const hasS=()=>$('#sc').value.trim().length>0;
+function sync(){const b=!!buf,x=busy||exporting||fxb,k=!!aiKey();
+  $('#pl').disabled=!b||x;$('#rs').disabled=!b||x;$('#ex').disabled=!b||x;$('#bm').disabled=!b||x;$('#mx').disabled=!mbuf;
+  $('#al').disabled=!hasS()||x;$('#ag').disabled=!b||!k||x;$('#fv').disabled=!b||x||!$('#ab').checked;
+  $('#pd').disabled=!$('#pp').value;$('#po').disabled=!$('#pp').value}
+setInterval(sync,300);sync();
+$('#pd').addEventListener('click',e=>{if(!confirm('Delete project "'+$('#pp').value+'" from this browser? This cannot be undone.'))e.stopImmediatePropagation()},true);
+$('#mx').addEventListener('click',e=>{if(!confirm('Remove the background music from this reel?'))e.stopImmediatePropagation()},true);
+$('#ps').title='Saves script, settings, scene cuts, voiceover and music in this browser';
+$('#al').title=$('#al').disabled?'Paste a script first':'';
+})();
 </script>
 </body>
 </html>

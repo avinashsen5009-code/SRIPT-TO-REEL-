@@ -25,3 +25,12 @@ Music mode: upload a song with no script and press "Music mode (beat cuts)". Exp
 - **Projects**: Save / Open / Delete inside the browser (IndexedDB). Stores script, settings, scene cuts, voiceover and music. Works offline. Web photos and AI visuals are not stored.
 - **Offline fonts**: run `python3 fetch-fonts.py` once (needs internet), then commit the new `fonts/` folder. The service worker caches it.
 - More library topics (calendar, ads, star, search, trust, world, podcast) and a higher-contrast camera icon.
+
+## v8 changes
+- Smoother preview: one pencil pass while previewing (two on export), cached chalk/vignette, no per-frame DOM lookups, adaptive 30 fps lock on slow devices.
+- Library: +5 scenes (gear, shield, cart, camera, mail) with English + Hindi keywords.
+- Per-scene "Visual" picker: Auto by default, pin any scene only if you want to.
+- Shortcuts: Space, left/right (Shift = 5 s), [ and ] for scenes. Buttons stay disabled until they can work; delete/remove ask first.
+
+## Bundled speech model (no download for visitors)
+Run once with internet: `python3 fetch-model.py` then commit `vendor/` and `models/`. Auto-transcribe then loads everything from your own site. If the folders are missing it falls back to downloading from the internet as before.
