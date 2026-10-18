@@ -1,49 +1,11 @@
-# Reel Studio (SCRIPT-TO-REEL)
+# Reel Studio
 
-Turn a voiceover, podcast or song into a vertical reel. Runs fully in the browser.
+Static, browser-based vertical reel editor. Host `index.html`, `manifest.json`, and `sw.js` together on any static HTTPS host. Upload narration or a video/audio file and paste a sentence-per-line script, then **Build reel from script**. Audio is required to time a reel. Script-based editing and built-in graphics require no API key or stock-photo service.
 
-## Host on GitHub Pages
-1. Upload all files in this folder to the repo root (Add file > Upload files > Commit).
-2. Settings > Pages > Deploy from a branch > `main` / `(root)` > Save.
-3. Open https://avinashsen5009-code.github.io/SRIPT-TO-REEL-/ after about a minute.
+## Visual editing
+Choose Balanced, Stickman-forward, Motion-graphics-forward, or Footage-forward. Each scene has an editable automatic treatment, a pinned treatment menu, the existing built-in visual picker, Replace media, layer toggles, reset, and move controls. User media is stored with browser projects (storage quota applies). Imported content remains the user's responsibility. The local scene planner emits an editable description in Scene JSON; uncertain interpretation is flagged rather than represented as a fact. Scenes use procedural canvas figures, arrows, cards, progressive flows, comparisons, steps, captions, and media annotations. Caption controls, music, voice recording, offline project storage, and export are retained.
 
-Install it as an app from the browser menu (Add to Home screen). Use Chrome or Edge.
+For consistent fast export, Chrome/Edge with WebCodecs and the existing mp4-muxer fallback import are recommended. Fast MP4 muxing and optional auto-transcription load free third-party code/models if not bundled; the browser falls back to real-time export where supported. For a fully offline installation, bundle the optional font, speech model, transformer library and muxer dependencies locally. No paid visual API is used. The service worker caches core files. Avoid importing unlicensed third-party assets.
 
-## AI Director
-Open the page, paste your own Anthropic API key under "AI Director", then press "Design visuals with AI". The key stays in your browser only. Never commit it.
-
-The site now works free and unlimited: scenes are drawn from a built-in vector library, matched to your words in Hindi and English. The AI Director is optional.
-
-Reel style: Trending (big word-by-word captions, punch zoom and flash cuts) or Classic.
-
-Music mode: upload a song with no script and press "Music mode (beat cuts)". Export now renders MP4 faster than real time in Chrome/Edge, and falls back to real-time recording if needed.
-
-## v11: narration-aware scene plan
-- Every scene now gets a **narrative role** read from your script (hook, problem, mechanism, example, contrast, list, evidence, takeaway), a core idea, and an **uncertainty flag** when the narration gives no clear signal — uncertain scenes use a neutral graphic and are marked ⚠ in the new **Scene plan** panel, where you can change the role or pin the suggested visual in one click.
-- Visuals follow the narration, not keywords alone: props appear **when the concept word is spoken** (word-anchored timing), mechanisms draw as progressive cause→effect diagrams, comparisons use a seesaw, lists build row by row, and the opening second shows a question or the core idea — never a logo.
-- **Visual direction** preference (Balanced / Stickman-forward / Motion-graphics-forward / Footage-forward) re-balances character vs diagram scale and placement every scene; Footage-forward grades photos/clips lighter and calmer.
-- Art direction between adjacent scenes: alternating composition side, cycling framing (wide/medium/close), no visual repeated twice in a row, punch zoom and flash only on keyword beats, stickers limited to emphasis/hooks/takeaways.
-- Scene JSON export now includes role, idea, uncertainty and per-beat visuals.
-
-## New in this version
-- **Hand-drawn sketch style** (default Reel style): chalk stickman with pencil-wobble lines, chalk grain, handwritten captions (Kalam, Hindi + English), marker highlight on keywords, handwritten labels with arrows that write themselves on, sticker pops, and chalk zig-zag cuts. The other styles and the whole icon library are unchanged.
-- **1080x1920 export** toggle next to Export video (720x1280 stays the default).
-- **Background music** with auto-ducking under the voice (also in the exported file).
-- **Projects**: Save / Open / Delete inside the browser (IndexedDB). Stores script, settings, scene cuts, voiceover and music. Works offline. Web photos and AI visuals are not stored.
-- **Offline fonts**: run `python3 fetch-fonts.py` once (needs internet), then commit the new `fonts/` folder. The service worker caches it.
-- More library topics (calendar, ads, star, search, trust, world, podcast) and a higher-contrast camera icon.
-
-## v8 changes
-- Smoother preview: one pencil pass while previewing (two on export), cached chalk/vignette, no per-frame DOM lookups, adaptive 30 fps lock on slow devices.
-- Library: +5 scenes (gear, shield, cart, camera, mail) with English + Hindi keywords.
-- Per-scene "Visual" picker: Auto by default, pin any scene only if you want to.
-- Shortcuts: Space, left/right (Shift = 5 s), [ and ] for scenes. Buttons stay disabled until they can work; delete/remove ask first.
-
-## Bundled speech model (no download for visitors)
-Run once with internet: `python3 fetch-model.py` then commit `vendor/` and `models/`. Auto-transcribe then loads everything from your own site. If the folders are missing it falls back to downloading from the internet as before.
-
-## v10: captions (Phase 1)
-- Captions now sit at 58.5% of the frame height (adjustable 55–62%); visuals are composed above them.
-- **Captions & safe zones** panel: on/off, 1/2/3 words per cue, emphasis Off/Subtle/Strong, outline/shadow/backing, size, text and highlight colours, and preview-only 9:16 safe-zone guides (never exported).
-- Tap a caption word in the preview, or edit words in the cue list (Hindi, English, Hinglish, numerals). Split/merge cues and edit cue start/end times. Each scene is labelled aligned, estimated or edited.
-- SRT and VTT export use the same cues as the preview. Projects save caption settings and edits.
+## Known constraints
+Scene understanding is rule-based (English/Hindi cues), not semantic AI. Pinned treatment and labels may need human review for ambiguous narration. Timing is estimated without aligned transcription. Video-file seeking and fast export are browser-dependent; fast export falls back to MediaRecorder for video clips. Browser storage may reject large projects.

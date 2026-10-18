@@ -1,0 +1,1 @@
+{"private":true,"name":"reel-studio-smoke-tests","version":"1.0.0","scripts":{"test":"node test-smoke.cjs"},"devDependencies":{"jsdom":"^26.0.0"}}
