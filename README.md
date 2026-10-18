@@ -18,6 +18,13 @@ Reel style: Trending (big word-by-word captions, punch zoom and flash cuts) or C
 
 Music mode: upload a song with no script and press "Music mode (beat cuts)". Export now renders MP4 faster than real time in Chrome/Edge, and falls back to real-time recording if needed.
 
+## v11: narration-aware scene plan
+- Every scene now gets a **narrative role** read from your script (hook, problem, mechanism, example, contrast, list, evidence, takeaway), a core idea, and an **uncertainty flag** when the narration gives no clear signal — uncertain scenes use a neutral graphic and are marked ⚠ in the new **Scene plan** panel, where you can change the role or pin the suggested visual in one click.
+- Visuals follow the narration, not keywords alone: props appear **when the concept word is spoken** (word-anchored timing), mechanisms draw as progressive cause→effect diagrams, comparisons use a seesaw, lists build row by row, and the opening second shows a question or the core idea — never a logo.
+- **Visual direction** preference (Balanced / Stickman-forward / Motion-graphics-forward / Footage-forward) re-balances character vs diagram scale and placement every scene; Footage-forward grades photos/clips lighter and calmer.
+- Art direction between adjacent scenes: alternating composition side, cycling framing (wide/medium/close), no visual repeated twice in a row, punch zoom and flash only on keyword beats, stickers limited to emphasis/hooks/takeaways.
+- Scene JSON export now includes role, idea, uncertainty and per-beat visuals.
+
 ## New in this version
 - **Hand-drawn sketch style** (default Reel style): chalk stickman with pencil-wobble lines, chalk grain, handwritten captions (Kalam, Hindi + English), marker highlight on keywords, handwritten labels with arrows that write themselves on, sticker pops, and chalk zig-zag cuts. The other styles and the whole icon library are unchanged.
 - **1080x1920 export** toggle next to Export video (720x1280 stays the default).
