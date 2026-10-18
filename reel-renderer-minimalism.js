@@ -63,23 +63,56 @@ function sceneAsset(c,item,data,progress){if(item.source==='svg'){const r=librar
  if(item.source==='scene'&&data.assets.stageFit){if(!silhouette){silhouette=document.createElement('canvas');silhouette.width=720;silhouette.height=1280}const off=silhouette.getContext('2d');off.setTransform(1,0,0,1,0,0);off.clearRect(0,0,720,1280);off.save();off.shadowBlur=0;try{data.assets.stageFit(off,item.id,Math.max(.02,data.time-data.start),data.time,PAPER,data.palette||{},0,false,item.word)}catch(e){off.restore();return false}off.restore();off.globalCompositeOperation='source-in';off.fillStyle=PAPER;off.fillRect(0,0,720,1280);off.globalCompositeOperation='source-over';c.save();c.globalAlpha=ease(progress);c.drawImage(silhouette,0,0);c.restore();return true}return false}
 function media(c,m,progress){const el=m.el,w=el.videoWidth||el.naturalWidth,h=el.videoHeight||el.naturalHeight;if(!w||!h)return false;
  const x=64,y=145,W=592,H=446,scale=Math.max(W/w,H/h);c.save();c.beginPath();c.rect(x,y,W,H);c.clip();c.filter='grayscale(1) contrast(1.15)';c.drawImage(el,x+(W-w*scale)/2,y+(H-h*scale)/2,w*scale,h*scale);c.filter='none';c.strokeStyle=PAPER;c.lineWidth=1;c.strokeRect(x+.5,y+.5,W-1,H-1);c.restore();return true}
+/* Hold one explanatory hero per scene. Only the small progress trace follows each word. */
+function heroFor(data){
+ const asset=data.assets||{},ws=data.words||[],candidate=[];
+ for(const w of ws){const r=resolve(w.w,data.text,asset);if(common.has(clean(w.w)))continue;
+  const weight=r.tier==='library'?4:r.tier==='procedural'?2:1;
+  candidate.push({r,weight,at:w.s})}
+ candidate.sort((a,b)=>b.weight-a.weight||a.at-b.at);
+ return candidate[0]?.r||resolve(data.text?.split(/\s+/)[0]||'•',data.text,asset);
+}
+function narrative(c,plan,phase){
+ const p=ease(phase),kind=plan?.purpose||'mechanism';c.save();c.strokeStyle='rgba(247,244,255,.55)';c.lineWidth=1.5;
+ if(kind==='contrast'){line(c,360,190,360,475,p);c.strokeRect(84,225,148,215);c.strokeRect(488,225,148,215)}
+ else if(kind==='list'){for(let k=0;k<3;k++){const x=176+k*184;c.strokeRect(x-24,490,48,48);line(c,x-10,515,x+10,515,Math.max(0,Math.min(1,(p*3-k))))}}
+ else if(kind==='problem'){line(c,94,470,275,470,p);line(c,445,470,626,470,p);c.strokeRect(330,452,60,36)}
+ else if(kind==='takeaway'){c.beginPath();c.arc(360,345,184,-Math.PI/2,-Math.PI/2+Math.PI*1.5*p);c.stroke()}
+ else if(kind==='hook'){c.beginPath();c.arc(360,345,170,Math.PI,-Math.PI+Math.PI*p);c.stroke()}
+ else if(kind==='example'){line(c,140,505,580,505,p);c.fillStyle=PAPER;c.fillRect(140+430*p,501,8,8)}
+ else{[130,590].forEach(x=>{c.beginPath();c.arc(x,345,9,0,7);c.stroke()});line(c,145,345,575,345,p)}
+ c.restore()
+}
+function rhythm(c,words,index,time){if(!words.length)return;c.save();c.strokeStyle='rgba(247,244,255,.38)';c.fillStyle=PAPER;c.lineWidth=1;
+ const n=words.length,left=98,width=524,y=619;c.beginPath();c.moveTo(left,y);c.lineTo(left+width,y);c.stroke();
+ words.forEach((w,k)=>{const x=left+(k+.5)*width/n;c.fillRect(x-1,y-3,2,6)});
+ const x=left+(Math.max(0,index)+.5)*width/n;c.fillRect(x-3,y-6,6,12);c.restore()}
 function renderScene(c,data){background(c);const words=data.words||[],t=data.time;
  let active=words.length?0:-1;for(let k=0;k<words.length;k++)if(t>=words[k].s)active=k;
- const w=active>=0?words[active]:null,markerText=w?.w||data.text||'•',start=w?.s??data.start,progress=clamp((t-start)/.36),asset=data.assets||{},item=resolve(markerText,data.text,asset);
- const layered=data.layers||{};let libraryPainted=false;const useMedia=data.media&&layered.media!==false&&(data.treatment==='media'||data.treatment==='auto'&&['balanced','footage'].includes(data.direction));
+ const w=active>=0?words[active]:null,markerText=w?.w||data.text||'•',start=w?.s??data.start;
+ const sceneProgress=Math.max(.26,clamp((t-data.start)/Math.max(data.motion==='calm'?1.4:.9,Math.min(2,(data.end-data.start)*.4)))),pulse=clamp((t-start)/.3),asset=data.assets||{},hero=data.pin&&asset.scenes?.[data.pin]?{tier:'library',source:'scene',id:data.pin,word:markerText}:heroFor(data),layered=data.layers||{};
+ let libraryPainted=false,drawnMedia=false;
+ const useMedia=data.media&&layered.media!==false&&(data.treatment==='media'||data.treatment==='auto'&&['balanced','footage'].includes(data.direction));
+ const grammar=data.plan?.grammar;
+ if(!data.pin&&!useMedia&&layered.diagram!==false&&grammar?.supported&&
+    (data.treatment==='explain'||data.treatment==='auto'&&data.direction!=='stickman')){
+  root.VisualGrammar.render(c,grammar,{style:'structural',time:t,revealAt:data.revealAt,calm:data.motion==='calm',getIcon:data.getIcon});
+  rhythm(c,words,active,t);frame(c);return{tier:'grounded-diagram',word:markerText,hero:grammar.kind,index:active};
+ }
  c.save();c.beginPath();c.rect(46,110,628,535);c.clip();
- if(useMedia&&media(c,data.media,progress)){/* User media remains the primary layer. */}
- else if(layered.diagram!==false){const picked=data.pin&&asset.scenes?.[data.pin]?{tier:'library',source:'scene',id:data.pin,word:markerText}:item;
-  if(picked.tier==='library'){libraryPainted=sceneAsset(c,picked,data,progress);if(!libraryPainted)vector(c,{shape:'tracker',word:markerText},progress,data.amplitude||0)}
-  else if(picked.tier==='procedural')vector(c,picked,progress,data.amplitude||0);
-  else typography(c,markerText,progress,data.amplitude||0);
- }else typography(c,markerText,progress,data.amplitude||0); // A visible rhythm remains even if diagram layer is hidden.
+ if(useMedia)drawnMedia=media(c,data.media,sceneProgress);
+ if(!drawnMedia){if(layered.diagram!==false&&data.treatment!=='typography'&&!(data.treatment==='auto'&&data.plan?.composition==='typography'))narrative(c,data.plan,sceneProgress);
+  if(data.treatment==='typography'||data.treatment==='auto'&&data.plan?.composition==='typography')typography(c,markerText,sceneProgress,0);
+  else if(hero.tier==='library'&&layered.diagram!==false){libraryPainted=sceneAsset(c,hero,{...data,time:data.start+Math.max(.02,t-data.start)},sceneProgress);if(!libraryPainted)vector(c,{shape:'focus',word:hero.word},sceneProgress,0)}
+  else if(hero.tier==='procedural'&&layered.diagram!==false)vector(c,hero,sceneProgress,0);
+  else typography(c,hero.word,sceneProgress,0)
+ }
  c.restore();
- if(layered.labels!==false){c.save();c.beginPath();c.rect(54,120,612,525);c.clip();
-  if(useMedia||libraryPainted){c.fillStyle='rgba(17,17,17,.9)';c.fillRect(90,562,540,54);title(c,markerText,360,587,520,38)}c.restore()}
- frame(c);return {tier:item.tier,word:markerText,index:active};
+ if(layered.labels!==false&&(drawnMedia||libraryPainted)){
+  c.save();c.fillStyle='rgba(17,17,17,.88)';c.fillRect(90,547,540,58);title(c,hero.word,360,575,520,35);c.restore()}
+ rhythm(c,words,active,t);frame(c);return {tier:hero.tier,word:markerText,hero:hero.word,index:active};
 }
-function caption(c,{cue,time,config,hits,safe}){hits.length=0;if(!config.on||!cue?.words?.length)return;
+function caption(c,{cue,time,config,hits,safe}){hits.length=0;if(!config.on||!cue?.words?.length||time<cue.words[0].s-.01)return;
  const ws=cue.words,active=Math.max(0,ws.reduce((idx,w,k)=>time>=w.s?k:idx,0)),start=Math.max(0,active-2),shown=ws.slice(start,active+1),y=config.y*1280;
  let size=(shown.length===1?90:shown.length===2?72:64)*config.size/100,maxW=Math.min(630,720*(1-2*(safe?.right||12)/100));
  c.save();c.font='600 '+size+'px '+FONT;const gap=15;let widths=shown.map(w=>c.measureText(w.w).width),total=widths.reduce((a,b)=>a+b,0)+gap*(shown.length-1);if(total>maxW){size*=maxW/total;c.font='600 '+size+'px '+FONT;widths=shown.map(w=>c.measureText(w.w).width);total=widths.reduce((a,b)=>a+b,0)+gap*(shown.length-1)}

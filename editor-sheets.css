@@ -1,0 +1,55 @@
+/* Compact progressive-disclosure tools: no existing editor controls are removed. */
+[hidden] { display: none !important; }
+main.minimalist-canvas-bg .tool-dock {
+  display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-inline: contain;
+  scrollbar-width: thin; padding: 5px 0; border-block: 1px solid var(--grid-line-color);
+}
+main.minimalist-canvas-bg .tool-tile { min-width: 102px; min-height: 48px; white-space: nowrap; padding: 7px 10px; font-size: 12px; background: #171717; }
+main.minimalist-canvas-bg .tool-tile span { font-size: 18px; vertical-align: -2px; margin-right: 5px; }
+main.minimalist-canvas-bg .tool-tile.active { border-color: rgba(247,244,255,.55); background: #252525; }
+main.minimalist-canvas-bg .tool-sheet h2 { font: 600 21px Georgia,serif; margin: 0; }
+main.minimalist-canvas-bg .tool-sheet { padding-block: 16px; }
+main.minimalist-canvas-bg #syncSheet output { color: #F7F4FF; font-variant-numeric: tabular-nums; }
+main.minimalist-canvas-bg #ls li:not(.scene-expanded) .rw,
+main.minimalist-canvas-bg #ls li:not(.scene-expanded) .layer-controls { display: none; }
+main.minimalist-canvas-bg #ls li.scene-expanded { border-left: 1px solid rgba(247,244,255,.45); padding-left: 6px; }
+main.minimalist-canvas-bg #ls button.sc { position: relative; padding-right: 28px; }
+main.minimalist-canvas-bg #ls button.sc::after { content: '⌄'; position: absolute; right: 10px; top: 12px; opacity: .75; }
+main.minimalist-canvas-bg #ls li.scene-expanded button.sc::after { content: '⌃'; }
+main.minimalist-canvas-bg #cap:not([open]) { padding-block: 10px; }
+@media(max-width:759px){
+ main.minimalist-canvas-bg .tool-dock { margin-inline: -4px; }
+ main.minimalist-canvas-bg .tool-tile { flex: 1 0 96px; }
+ main.minimalist-canvas-bg #syncSheet .bar button { flex: 1 1 90px; }
+ main.minimalist-canvas-bg #cues { max-height: 48vh; }
+}
+/* The existing caption editor opens with only three understandable controls. */
+main.minimalist-canvas-bg #cap:not(.advanced-open) > .capg:first-of-type label:nth-child(n+3):not(:nth-child(6)),
+main.minimalist-canvas-bg #cap:not(.advanced-open) > .capg:nth-of-type(2),
+main.minimalist-canvas-bg #cap:not(.advanced-open) > p:not(#c_t),
+main.minimalist-canvas-bg #cap:not(.advanced-open) > #cues,
+main.minimalist-canvas-bg #cap:not(.advanced-open) > .bar { display: none; }
+main.minimalist-canvas-bg #capAdvanced { justify-self: start; min-height: 38px; padding: 6px 12px; font-size: 12px; }
+main.minimalist-canvas-bg #cues button.word-nudge { min-height: 32px; min-width: 28px; padding: 3px 6px; font-size: 13px; }
+@media(max-width:390px){
+ main.minimalist-canvas-bg .bar button { flex: 1 1 calc(50% - 8px); }
+ main.minimalist-canvas-bg .tool-sheet .bar button { flex: 1 1 calc(50% - 8px); }
+}
+/* Genuine landscape preview; original portrait preview remains the default. */
+main.minimalist-canvas-bg #pvw.wide-preview { max-width: min(100%, 640px); }
+main.minimalist-canvas-bg #pv.wide-preview { max-width: 100%; aspect-ratio: 16 / 9; }
+@media(min-width:760px){main.minimalist-canvas-bg .grid.wide-preview { grid-template-columns: minmax(0, 640px) minmax(0, 1fr); }}
+@media(max-width:759px){main.minimalist-canvas-bg .grid.wide-preview { grid-template-columns: minmax(0, 1fr); }}
+
+/* Small, honest director review inside the existing expanded scene controls. */
+main.minimalist-canvas-bg #ls li:not(.scene-expanded) .director-review{display:none}
+main.minimalist-canvas-bg .director-review{border:1px solid var(--grid-line-color);padding:8px;margin:8px 0;border-radius:8px}
+main.minimalist-canvas-bg .director-review p{margin:0 0 8px;font-size:12px;color:var(--mute)}
+main.minimalist-canvas-bg .director-review button{font-size:12px;min-height:38px;margin:2px 4px 2px 0;padding:5px 8px}
+main.minimalist-canvas-bg .director-review button[aria-pressed="true"]{border-color:var(--text-primary-white);color:var(--text-primary-white)}
+/* Mobile-first, explicit model setup. Existing style and editing rows remain untouched. */
+main.minimalist-canvas-bg .speech-setup{border:1px solid rgba(247,244,255,.35);background:#1b1b1b;border-radius:10px;margin:12px 0;padding:14px;max-width:760px}
+main.minimalist-canvas-bg .speech-setup strong{display:block;font-size:16px}
+main.minimalist-canvas-bg .speech-setup p{line-height:1.5;margin:8px 0 12px}
+main.minimalist-canvas-bg .speech-setup button{min-height:44px}
+@media(max-width:600px){main.minimalist-canvas-bg .speech-setup .bar button{flex:1 1 100%;width:100%}}
