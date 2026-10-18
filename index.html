@@ -6,7 +6,7 @@
 <title>Reel Studio</title>
 <link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg"><meta name="theme-color" content="#0F1620">
 <link rel="stylesheet" href="fonts/fonts.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600;700&family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600;700&family=Kalam:wght@400;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap">
 <style>
 :root{--bg:#E8EDF4;--surf:#F7F9FC;--ink:#14202E;--mute:#5B6B7F;--line:#C9D3E0;--acc:#E59A00;--accink:#14202E;--wave:#0E7C86;--band:rgba(20,32,46,.06);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1620;--surf:#172233;--ink:#E8EEF6;--mute:#93A4BA;--line:#27364B;--acc:#F2B233;--wave:#4CC3CE;--band:rgba(255,255,255,.05);color-scheme:dark}}
@@ -124,11 +124,11 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 </div>
 <div class="row">
 <label>Style
-<select id="th" class="big"><option value="cine">Cinematic</option><option value="neon">Neon pop</option><option value="gold">Black and gold</option><option value="fire">Fire red</option></select></label>
+<select id="th" class="big"><option value="cine">Cinematic</option><option value="studio">Studio (Indigo & Amber)</option><option value="neon">Neon pop</option><option value="gold">Black and gold</option><option value="fire">Fire red</option></select></label>
 <label>Handle on video (optional)
 <input type="text" id="hd" placeholder="@yourname"></label>
 <label>Reel style
-<select id="sty" class="big"><option value="sketch" selected>Hand-drawn sketch: chalk stickman + trending cuts (new)</option><option value="trend">Trending: big word captions, punch cuts</option><option value="classic">Classic: small captions</option></select></label>
+<select id="sty" class="big"><option value="sketch" selected>Hand-drawn sketch: chalk stickman + trending cuts (new)</option><option value="studio">Studio Editorial: Luxury mesh, tech HUD & stickman operator (new)</option><option value="trend">Trending: big word captions, punch cuts</option><option value="classic">Classic: small captions</option></select></label>
 <label>Visual direction
 <select id="dir" class="big"><option value="balance" selected>Balanced</option><option value="stick">Stickman-forward</option><option value="motion">Motion-graphics-forward</option><option value="foot">Footage-forward</option></select></label>
 </div>
@@ -241,6 +241,7 @@ const TPL={talk:'Topic: people / general',question:'Topic: question',idea:'Topic
 const KW={question:['what','why','how ','who ','?','क्या','कैसे','क्यों','कौन'],idea:['think','mind','brain','creative','आइडिया','सोच','दिमाग','विचार','idea','समझ'],walk:['journey','start','step','path','चल','रास्ता','सफर','कदम','यात्रा','शुरू','walk'],money:['cash','rich','salary','invest','profit','पैसा','पैसे','पैसों','कमाई','रुपये','रुपए','₹','धन','अमीर','money'],growth:['success','improve','progress','level up','बढ़','ग्रोथ','सफल','तरक्की','आगे','ऊपर','grow'],clock:['today','hour','minute','daily','years','समय','वक़्त','वक्त','घंटा','दिन','आज','टाइम','time'],warning:['danger','warning','careful','never','avoid','खतरा','गलती','सावधान','ध्यान','नुकसान','मत ','mistake']};
 const CATQ={talk:['people conversation','audience crowd'],question:['thinking person','question mark'],idea:['light bulb idea','brainstorming'],walk:['walking road','sunrise path'],money:['money banknotes','coins savings'],growth:['plant growth','business growth'],clock:['clock time','hourglass'],warning:['warning sign','caution sign']};
 const PAL={
+  studio:{bg:['#0D121F','#1A233A'],acc:['#6366F1','#F59E0B','#38BDF8','#10B981'],dark:'#090D16'},
   cine:{bg:['#0A1118','#16283A'],acc:['#FFB347','#5ED3F3','#FF7A59','#B8F28C'],dark:'#0A1118'},
   neon:{bg:['#0B0B2B','#26104A'],acc:['#FF2E88','#00E5FF','#FFD60A','#7CFF4D'],dark:'#0B0B1E'},
   gold:{bg:['#0A0A0A','#1D1606'],acc:['#FFD60A','#FF9F0A','#FFFFFF'],dark:'#111111'},
@@ -2429,6 +2430,832 @@ LIB.push(
 })();
 </script>
 
+
+<script>
+/* ===== Part 4: Studio Editorial Style (Luxury Mesh, Studio HUD & Tech Motion Primitives) ===== */
+(()=>{
+
+/* ---- Font & Palette Integration ---- */
+const HFE = '"Playfair Display",Georgia,"Times New Roman",serif';
+if(!PAL.studio){
+  PAL.studio = {bg:['#0D121F','#1A233A'],acc:['#6366F1','#F59E0B','#38BDF8','#10B981'],dark:'#090D16'};
+}
+
+/* ---- Ambient Mesh Gradient & Studio Technical HUD Frame ---- */
+function studioBg(c, P, t, col){
+  // 1. Deep Slate or Cream Canvas Base
+  const isLight = !!P.light;
+  const base1 = isLight ? '#FAF7F2' : (P.bg ? P.bg[0] : '#0D121F');
+  const base2 = isLight ? '#EFEAE0' : (P.bg ? P.bg[1] : '#1A233A');
+  const bgGrad = c.createLinearGradient(0, 0, 0, H);
+  bgGrad.addColorStop(0, base1);
+  bgGrad.addColorStop(1, base2);
+  c.fillStyle = bgGrad;
+  c.fillRect(-120, -120, W + 240, H + 240);
+
+  // 2. Multi-point Floating Ambient Mesh Radial Glows (Video 1 & 2 signature)
+  const orbs = [
+    {x: 220 + Math.sin(t * 0.5) * 80, y: 380 + Math.cos(t * 0.4) * 60, r: 420, c: col || '#6366F1', a: isLight ? 0.22 : 0.35},
+    {x: 520 + Math.cos(t * 0.6) * 70, y: 720 + Math.sin(t * 0.7) * 80, r: 380, c: '#F59E0B', a: isLight ? 0.16 : 0.26},
+    {x: 200 + Math.sin(t * 0.8) * 60, y: 980 + Math.cos(t * 0.5) * 70, r: 360, c: '#38BDF8', a: isLight ? 0.14 : 0.22}
+  ];
+  orbs.forEach(o => {
+    const rg = c.createRadialGradient(o.x, o.y, 20, o.x, o.y, o.r);
+    rg.addColorStop(0, hexA(o.c, o.a));
+    rg.addColorStop(1, hexA(o.c, 0));
+    c.fillStyle = rg;
+    c.fillRect(o.x - o.r, o.y - o.r, o.r * 2, o.r * 2);
+  });
+
+  // 3. Subtle Technical Studio Grid Dots
+  c.fillStyle = isLight ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.06)';
+  for(let y = 60; y < H; y += 48){
+    for(let x = ((y / 48) % 2) * 24; x < W; x += 48){
+      c.beginPath();
+      c.arc(x, y, 1.8, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+
+  // 4. Ground Shelf Line with Diffuse Ambient Light
+  const gy = VIS.gy;
+  c.strokeStyle = isLight ? 'rgba(15,23,42,0.12)' : 'rgba(255,255,255,0.15)';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(40, gy);
+  c.lineTo(W - 40, gy);
+  c.stroke();
+
+  // 5. Studio Technical HUD Telemetry (Wink Guys / Video 1 & 2 aesthetic)
+  c.save();
+  c.font = '600 13px ui-monospace, SFMono-Regular, Menlo, monospace';
+  const hudCol = isLight ? 'rgba(15,23,42,0.55)' : 'rgba(255,255,255,0.55)';
+  c.fillStyle = hudCol;
+
+  // Top-left Pill: [ STUDIO // REEL 01 ]
+  c.textAlign = 'left';
+  c.fillText('CLAUDE • STUDIO EDIT \'26', 42, 84);
+
+  // Top-right: 01 / 24 • 24 FPS • 9:16
+  c.textAlign = 'right';
+  c.fillText('01 / 27 • 24 FPS • 9:16', W - 42, 84);
+
+  // Bottom-left status
+  c.textAlign = 'left';
+  c.fillText('stickman engine • 1080p • render', 42, H - 42);
+
+  // Bottom-right timecode
+  c.textAlign = 'right';
+  const curT = (t || 0).toFixed(2);
+  c.fillText(curT + 's // ACTIVE', W - 42, H - 42);
+
+  // Bottom Hairline Playback Scrubber Track
+  const trackY = H - 24;
+  c.strokeStyle = isLight ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.1)';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(42, trackY);
+  c.lineTo(W - 42, trackY);
+  c.stroke();
+
+  // Active glowing scrubber bead
+  const progress = buf && buf.duration ? Math.min(1, Math.max(0, t / buf.duration)) : 0.35;
+  const beadX = 42 + (W - 84) * progress;
+  c.strokeStyle = col || '#6366F1';
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(42, trackY);
+  c.lineTo(beadX, trackY);
+  c.stroke();
+  circ(c, beadX, trackY, 5);
+  c.fillStyle = '#FFFFFF';
+  c.fill();
+  c.strokeStyle = col || '#6366F1';
+  c.lineWidth = 2;
+  c.stroke();
+
+  // Corner Micro Crosshairs (+)
+  const chSize = 7;
+  [[32, 70], [W - 32, 70], [32, H - 56], [W - 32, H - 56]].forEach(([cx, cy]) => {
+    c.strokeStyle = hudCol;
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(cx - chSize, cy);
+    c.lineTo(cx + chSize, cy);
+    c.moveTo(cx, cy - chSize);
+    c.lineTo(cx, cy + chSize);
+    c.stroke();
+  });
+  c.restore();
+}
+
+/* ---- Hook stageBg to use studioBg when UI.sty === 'studio' ---- */
+{
+  const _origStageBg = stageBg;
+  stageBg = function(c, P, t, col){
+    if(UI.sty === 'studio'){
+      studioBg(c, P, t, col);
+    } else {
+      _origStageBg(c, P, t, col);
+    }
+  };
+}
+
+/* ---- Hook drawPrev font stack when in studio mode ---- */
+{
+  const _origDrawPrev = drawPrev;
+  drawPrev = function(t){
+    if(UI.sty === 'studio'){
+      HF = HFE;
+    }
+    _origDrawPrev(t);
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* 8 SIGNATURE VISUAL PRIMITIVES FROM VIDEO 1 & VIDEO 2              */
+/* ------------------------------------------------------------------ */
+
+/* 1. macOS Code Terminal + Yellow Sticky Note (Video 1 & 2) */
+function P_codeTerminal(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.55));
+  c.save();
+  c.scale(q, q);
+
+  // Main Terminal Window
+  const tw = 310, th = 175;
+  rr(c, -tw/2, -th/2 - 10, tw, th, 14);
+  c.fillStyle = '#0F172A';
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.14)';
+  c.lineWidth = 2.5;
+  c.stroke();
+
+  // Traffic Light Buttons
+  [[-tw/2 + 20, -th/2 + 6, '#EF4444'], [-tw/2 + 36, -th/2 + 6, '#F59E0B'], [-tw/2 + 52, -th/2 + 6, '#10B981']].forEach(([bx, by, bc]) => {
+    circ(c, bx, by, 5);
+    c.fillStyle = bc;
+    c.fill();
+  });
+  // Window Title
+  c.font = '500 11px ui-monospace, monospace';
+  c.fillStyle = 'rgba(255,255,255,0.45)';
+  c.textAlign = 'center';
+  c.fillText('studio.config.ts', 0, -th/2 + 10);
+
+  // Code Lines Typing in Progressively
+  const lines = [
+    {t: '// 100% automated video engine', c: '#64748B'},
+    {t: 'const reel = studio.create({', c: '#93C5FD'},
+    {t: '  style: "editorial",', c: '#FDE047'},
+    {t: '  motion: "premium"', c: '#A7F3D0'},
+    {t: '});', c: '#93C5FD'}
+  ];
+  c.font = '600 13px ui-monospace, Menlo, monospace';
+  c.textAlign = 'left';
+  lines.forEach((ln, k) => {
+    const lq = Math.min(1, Math.max(0, (lt - 0.12 - k * 0.12) / 0.18));
+    if(lq <= 0) return;
+    const charCount = Math.floor(ln.t.length * lq);
+    c.fillStyle = ln.c;
+    c.fillText(ln.t.slice(0, charCount), -tw/2 + 18, -th/2 + 38 + k * 24);
+    if(k === Math.min(lines.length - 1, Math.floor((lt - 0.12) / 0.12))){
+      // Blinking cursor block
+      if((t * 4) % 1 > 0.4){
+        c.fillStyle = col || '#6366F1';
+        c.fillRect(-tw/2 + 18 + c.measureText(ln.t.slice(0, charCount)).width + 2, -th/2 + 26 + k * 24, 7, 14);
+      }
+    }
+  });
+
+  // Tilted Yellow Sticky Note Beside (Video 1 & 2)
+  const sq = ease(Math.max(0, (lt - 0.4) / 0.45));
+  if(sq > 0){
+    c.save();
+    c.translate(tw/2 - 40, -th/2 + 25);
+    c.rotate(0.12);
+    c.scale(sq, sq);
+    const nw = 110, nh = 74;
+    rr(c, -nw/2, -nh/2, nw, nh, 8);
+    c.fillStyle = '#FEF08A';
+    c.fill();
+    c.strokeStyle = '#FDE047';
+    c.lineWidth = 2;
+    c.stroke();
+    // Sticky note text
+    c.font = '700 16px ' + HF;
+    c.textAlign = 'center';
+    c.fillStyle = '#854D0E';
+    c.fillText('way cheaper.', 0, -8);
+    c.font = '600 11px ui-monospace, monospace';
+    c.fillStyle = '#A16207';
+    c.fillText('10x faster ✦', 0, 14);
+    c.restore();
+  }
+  c.restore();
+}
+
+/* 2. Interactive Bézier Easing Curve Motion Visualizer (Video 1) */
+function P_bezierCurve(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.65));
+  c.save();
+  c.scale(q, q);
+
+  const bw = 290, bh = 170;
+  // Frame Card
+  rr(c, -bw/2, -bh/2, bw, bh, 14);
+  c.fillStyle = 'rgba(15,23,42,0.85)';
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.14)';
+  c.lineWidth = 2;
+  c.stroke();
+
+  // Grid Coordinate Lines
+  c.strokeStyle = 'rgba(255,255,255,0.08)';
+  c.lineWidth = 1.5;
+  c.setLineDash([4, 4]);
+  [-60, 0, 60].forEach(gx => {
+    c.beginPath(); c.moveTo(gx, -bh/2 + 16); c.lineTo(gx, bh/2 - 16); c.stroke();
+  });
+  [-40, 0, 40].forEach(gy => {
+    c.beginPath(); c.moveTo(-bw/2 + 16, gy); c.lineTo(bw/2 - 16, gy); c.stroke();
+  });
+  c.setLineDash([]);
+
+  // Cubic Bézier S-Curve Path
+  const p0 = {x: -110, y: 45}, p1 = {x: -35, y: 45}, p2 = {x: 35, y: -45}, p3 = {x: 110, y: -45};
+  c.strokeStyle = col || '#818CF8';
+  c.lineWidth = 5;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(p0.x, p0.y);
+  c.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+  c.stroke();
+
+  // Keyframe Diamond Handles (◇)
+  const drawDiamond = (hx, hy) => {
+    c.save(); c.translate(hx, hy); c.rotate(Math.PI / 4);
+    c.fillStyle = '#FFFFFF'; c.fillRect(-5, -5, 10, 10);
+    c.strokeStyle = col || '#6366F1'; c.lineWidth = 2; c.strokeRect(-5, -5, 10, 10);
+    c.restore();
+  };
+  drawDiamond(p0.x, p0.y);
+  drawDiamond(p3.x, p3.y);
+
+  // Velocity Bead Rolling along S-curve
+  const u = (t * 0.7) % 1;
+  const mu = 1 - u;
+  const bx = mu*mu*mu*p0.x + 3*mu*mu*u*p1.x + 3*mu*u*u*p2.x + u*u*u*p3.x;
+  const by = mu*mu*mu*p0.y + 3*mu*mu*u*p1.y + 3*mu*u*u*p2.y + u*u*u*p3.y;
+  circ(c, bx, by, 8);
+  c.fillStyle = '#38BDF8';
+  c.fill();
+  c.strokeStyle = '#FFFFFF';
+  c.lineWidth = 2.5;
+  c.stroke();
+
+  // Header Badge
+  c.font = '600 13px ui-monospace, monospace';
+  c.fillStyle = '#E2E8F0';
+  c.textAlign = 'center';
+  c.fillText('premium motion // cubic-bezier', 0, -bh/2 + 20);
+
+  c.restore();
+}
+
+/* 3. Live Installation / Progress Meter with Pixel Bot Mascot (Video 2) */
+function P_installProgress(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.75));
+  c.save();
+  c.scale(q, q);
+
+  const cw = 300, ch = 185;
+  rr(c, -cw/2, -ch/2, cw, ch, 16);
+  c.fillStyle = 'rgba(15,23,42,0.92)';
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.15)';
+  c.lineWidth = 2.5;
+  c.stroke();
+
+  // Retro Pixel Bot Mascot (drawn directly on canvas, Video 2 signature)
+  const bob = Math.sin(t * 5) * 4;
+  c.save();
+  c.translate(0, -ch/2 + 36 + bob);
+  c.fillStyle = '#F97316'; // terracotta orange
+  // Head block
+  c.fillRect(-20, -18, 40, 24);
+  // Legs
+  c.fillRect(-18, 6, 8, 8);
+  c.fillRect(-6, 6, 8, 8);
+  c.fillRect(6, 6, 8, 8);
+  // Eyes
+  c.fillStyle = '#0F172A';
+  c.fillRect(-12, -10, 6, 6);
+  c.fillRect(6, -10, 6, 6);
+  c.restore();
+
+  // Title
+  c.font = '700 19px ' + HF;
+  c.textAlign = 'center';
+  c.fillStyle = '#F8FAFC';
+  c.fillText('Installing Skill Components', 0, 8);
+
+  // Progress Bar Track
+  const pw = 240, ph = 14;
+  rr(c, -pw/2, 34, pw, ph, 7);
+  c.fillStyle = 'rgba(255,255,255,0.12)';
+  c.fill();
+
+  // Progress Fill
+  const pct = Math.min(1, lt / 0.85);
+  if(pct > 0){
+    rr(c, -pw/2, 34, Math.max(12, pw * pct), ph, 7);
+    c.fillStyle = pct >= 0.98 ? '#10B981' : (col || '#F97316');
+    c.fill();
+  }
+
+  // Percentage & Subtext
+  c.font = '600 12px ui-monospace, monospace';
+  c.fillStyle = 'rgba(255,255,255,0.6)';
+  c.textAlign = 'left';
+  c.fillText(pct >= 0.98 ? 'Ready to use ✓' : 'Downloading modules...', -pw/2, 66);
+  c.textAlign = 'right';
+  c.fillStyle = pct >= 0.98 ? '#10B981' : '#F8FAFC';
+  c.fillText(Math.round(pct * 100) + '%', pw/2, 66);
+
+  c.restore();
+}
+
+/* 4. Live Task Execution Pipeline Checklist Card (Video 2) */
+function P_taskChecklist(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.6));
+  c.save();
+  c.scale(q, q);
+
+  const cw = 300, ch = 195;
+  rr(c, -cw/2, -ch/2, cw, ch, 14);
+  c.fillStyle = 'rgba(15,23,42,0.9)';
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.15)';
+  c.lineWidth = 2.5;
+  c.stroke();
+
+  // Header Dots
+  [[-cw/2 + 18, -ch/2 + 14, '#EF4444'], [-cw/2 + 32, -ch/2 + 14, '#F59E0B'], [-cw/2 + 46, -ch/2 + 14, '#10B981']].forEach(([bx, by, bc]) => {
+    circ(c, bx, by, 4); c.fillStyle = bc; c.fill();
+  });
+  c.font = '600 12px ui-monospace, monospace';
+  c.fillStyle = '#CBD5E1';
+  c.textAlign = 'center';
+  c.fillText('Execution Pipeline', 0, -ch/2 + 18);
+
+  // 4 Tasks Sequentially Checking Off
+  const tasks = [
+    'Reading source script',
+    'Generating keyframes',
+    'Applying motion curves',
+    'Checking frame clarity'
+  ];
+  tasks.forEach((tsk, k) => {
+    const tq = outCubic(Math.max(0, (lt - k * 0.18) / 0.35));
+    const isDone = tq > 0.85;
+    const y = -ch/2 + 48 + k * 34;
+
+    // Status icon
+    if(isDone){
+      circ(c, -cw/2 + 24, y, 9);
+      c.fillStyle = '#10B981';
+      c.fill();
+      c.strokeStyle = '#FFFFFF';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.moveTo(-cw/2 + 20, y);
+      c.lineTo(-cw/2 + 23, y + 3);
+      c.lineTo(-cw/2 + 28, y - 3);
+      c.stroke();
+    } else {
+      circ(c, -cw/2 + 24, y, 8);
+      c.strokeStyle = 'rgba(255,255,255,0.3)';
+      c.lineWidth = 2;
+      c.stroke();
+    }
+
+    // Task text
+    c.font = (isDone ? '600 ' : '400 ') + '13px ' + HF;
+    c.textAlign = 'left';
+    c.fillStyle = isDone ? '#F8FAFC' : 'rgba(255,255,255,0.45)';
+    c.fillText(tsk, -cw/2 + 42, y + 4);
+
+    // Tag
+    if(isDone){
+      c.font = '600 10px ui-monospace, monospace';
+      c.textAlign = 'right';
+      c.fillStyle = '#10B981';
+      c.fillText('[DONE]', cw/2 - 16, y + 4);
+    }
+  });
+
+  c.restore();
+}
+
+/* 5. GitHub Star History / Exponential Viral Growth Chart (Video 2) */
+function P_growthChart(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.8));
+  c.save();
+  c.scale(q, q);
+
+  const gw = 280, gh = 175;
+  rr(c, -gw/2, -gh/2, gw, gh, 14);
+  c.fillStyle = 'rgba(15,23,42,0.88)';
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.14)';
+  c.lineWidth = 2;
+  c.stroke();
+
+  // Header with Star
+  c.font = '700 14px ' + HF;
+  c.textAlign = 'center';
+  c.fillStyle = '#F8FAFC';
+  c.fillText('⭐ Star History Trajectory', 0, -gh/2 + 22);
+
+  // Axes
+  const ax0 = -gw/2 + 36, ay0 = gh/2 - 28;
+  const ax1 = gw/2 - 24, ay1 = -gh/2 + 44;
+  c.strokeStyle = 'rgba(255,255,255,0.25)';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(ax0, ay1);
+  c.lineTo(ax0, ay0);
+  c.lineTo(ax1, ay0);
+  c.stroke();
+
+  // Y-axis labels
+  c.font = '500 10px ui-monospace, monospace';
+  c.fillStyle = 'rgba(255,255,255,0.45)';
+  c.textAlign = 'right';
+  c.fillText('80k', ax0 - 6, ay1 + 8);
+  c.fillText('20k', ax0 - 6, ay0 - 35);
+  c.fillText('0', ax0 - 6, ay0);
+
+  // X-axis labels
+  c.textAlign = 'center';
+  c.fillText('Oct', ax0 + 30, ay0 + 16);
+  c.fillText('Jan', ax0 + 95, ay0 + 16);
+  c.fillText('Apr', ax0 + 160, ay0 + 16);
+
+  // Exponential Curve Shooting Up
+  const curveW = ax1 - ax0 - 20;
+  const curveH = ay0 - ay1 - 10;
+  c.strokeStyle = '#EF4444'; // Red curve like star-history.com
+  c.lineWidth = 4;
+  c.lineCap = 'round';
+  c.beginPath();
+  const maxSteps = Math.floor(40 * q);
+  for(let k = 0; k <= maxSteps; k++){
+    const u = k / 40;
+    const cx = ax0 + u * curveW;
+    const cy = ay0 - Math.pow(u, 2.4) * curveH;
+    if(k === 0) c.moveTo(cx, cy); else c.lineTo(cx, cy);
+  }
+  c.stroke();
+
+  // Trailing dot markers
+  if(q > 0.4){
+    const tipU = q;
+    const tipX = ax0 + tipU * curveW;
+    const tipY = ay0 - Math.pow(tipU, 2.4) * curveH;
+    circ(c, tipX, tipY, 6);
+    c.fillStyle = '#EF4444';
+    c.fill();
+    c.strokeStyle = '#FFFFFF';
+    c.lineWidth = 2;
+    c.stroke();
+  }
+
+  c.restore();
+}
+
+/* 6. Fanned Document Files & Mouse Pointer (Video 2) */
+function P_fannedFiles(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.65));
+  c.save();
+  c.scale(q, q);
+
+  const files = [
+    {n: 'SKILL.md', c: '#F8FAFC', r: -0.22, x: -70, num: '1'},
+    {n: 'brand.pdf', c: '#EF4444', r: -0.07, x: -22, num: '2'},
+    {n: 'assets/', c: '#38BDF8', r: 0.08, x: 26, num: '3'},
+    {n: 'bundle.zip', c: '#F59E0B', r: 0.24, x: 74, num: '4'}
+  ];
+
+  files.forEach((f, k) => {
+    c.save();
+    c.translate(f.x, 10);
+    c.rotate(f.r);
+    // Document Card
+    const fw = 62, fh = 88;
+    rr(c, -fw/2, -fh/2, fw, fh, 8);
+    c.fillStyle = '#1E293B';
+    c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.2)';
+    c.lineWidth = 2;
+    c.stroke();
+
+    // Top Header Pill
+    rr(c, -fw/2 + 6, -fh/2 + 6, fw - 12, 14, 4);
+    c.fillStyle = f.c;
+    c.fill();
+
+    // Label
+    c.font = '600 9px ui-monospace, monospace';
+    c.fillStyle = '#E2E8F0';
+    c.textAlign = 'center';
+    c.fillText(f.n, 0, 16);
+
+    // Sketch Arrow + Number Badge Above (Video 2 signature)
+    c.strokeStyle = '#F59E0B';
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.moveTo(0, -fh/2 - 28);
+    c.lineTo(0, -fh/2 - 6);
+    c.stroke();
+    circ(c, 0, -fh/2 - 34, 9);
+    c.fillStyle = '#F59E0B';
+    c.fill();
+    c.font = '700 11px ui-monospace, monospace';
+    c.fillStyle = '#0F172A';
+    c.fillText(f.num, 0, -fh/2 - 30);
+
+    c.restore();
+  });
+
+  // Animated Mouse Click Cursor (Video 2 signature)
+  const clickQ = outCubic(Math.max(0, (lt - 0.45) / 0.4));
+  if(clickQ > 0){
+    c.save();
+    c.translate(35 * clickQ, 35 * clickQ);
+    c.fillStyle = '#38BDF8';
+    c.beginPath();
+    c.moveTo(0, 0);
+    c.lineTo(0, 18);
+    c.lineTo(5, 14);
+    c.lineTo(10, 22);
+    c.lineTo(14, 20);
+    c.lineTo(9, 12);
+    c.lineTo(16, 12);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = '#FFFFFF';
+    c.lineWidth = 1.5;
+    c.stroke();
+    c.restore();
+  }
+
+  c.restore();
+}
+
+/* 7. Cost Comparison Towers: Local / Claude vs Expensive API (Video 1) */
+function P_costComparison(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.7));
+  c.save();
+  c.scale(q, q);
+
+  // Left Bar: Local / Low Cost
+  const lq = outCubic(Math.min(1, lt / 0.5));
+  const lw = 100, lh = 60 * lq;
+  rr(c, -115, 60 - lh, lw, lh, 10);
+  c.fillStyle = '#6366F1';
+  c.fill();
+  c.strokeStyle = '#818CF8';
+  c.lineWidth = 2.5;
+  c.stroke();
+  c.font = '700 24px ' + HF;
+  c.fillStyle = '#FFFFFF';
+  c.textAlign = 'center';
+  c.fillText('$', -65, 60 - lh/2 + 8);
+  c.font = '600 11px ui-monospace, monospace';
+  c.fillStyle = 'rgba(255,255,255,0.7)';
+  c.fillText('LOCAL / FAST', -65, 80);
+
+  // Right Tower: Expensive Generator (tall striped column)
+  const rq = outCubic(Math.max(0, (lt - 0.25) / 0.55));
+  const rw = 110, rh = 180 * rq;
+  c.save();
+  rr(c, 15, 60 - rh, rw, rh, 10);
+  c.fillStyle = '#FB7185';
+  c.fill();
+  c.clip();
+  // Diagonal Stripes (Video 1 signature)
+  c.strokeStyle = 'rgba(255,255,255,0.2)';
+  c.lineWidth = 8;
+  for(let sx = -80; sx < rw + 80; sx += 20){
+    c.beginPath();
+    c.moveTo(15 + sx, 60);
+    c.lineTo(15 + sx + 60, 60 - rh - 60);
+    c.stroke();
+  }
+  c.restore();
+  c.strokeStyle = '#F43F5E';
+  c.lineWidth = 2.5;
+  rr(c, 15, 60 - rh, rw, rh, 10);
+  c.stroke();
+
+  c.font = '700 24px ' + HF;
+  c.fillStyle = '#FFFFFF';
+  c.textAlign = 'center';
+  c.fillText('$$$$$', 70, 60 - rh/2 + 8);
+  c.font = '600 11px ui-monospace, monospace';
+  c.fillStyle = 'rgba(255,255,255,0.7)';
+  c.fillText('EXPENSIVE APIS', 70, 80);
+
+  // Floating 10X Badge
+  if(rq > 0.6){
+    c.save();
+    c.translate(70, 60 - rh - 18);
+    rr(c, -45, -14, 90, 28, 14);
+    c.fillStyle = '#FEF08A';
+    c.fill();
+    c.font = '700 12px ui-monospace, monospace';
+    c.fillStyle = '#854D0E';
+    c.fillText('10X COST ⚠', 0, 5);
+    c.restore();
+  }
+
+  c.restore();
+}
+
+/* 8. AI Chat / Prompt Input Bar with Typing Cursor (Video 1) */
+function P_promptBar(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.6));
+  c.save();
+  c.scale(q, q);
+
+  const pw = 300, ph = 54;
+  // Pill Input Field
+  rr(c, -pw/2, -ph/2, pw, ph, 27);
+  c.fillStyle = 'rgba(15,23,42,0.92)';
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.18)';
+  c.lineWidth = 2.5;
+  c.stroke();
+
+  // Prompt Text Typing In
+  const promptTxt = tx ? 'message: ' + tx.slice(0, 22) : 'message assistant...';
+  const charN = Math.floor(promptTxt.length * Math.min(1, lt / 0.5));
+  c.font = '500 14px ' + HF;
+  c.fillStyle = '#E2E8F0';
+  c.textAlign = 'left';
+  c.fillText(promptTxt.slice(0, charN), -pw/2 + 22, 5);
+
+  // Blinking Purple Cursor
+  if((t * 4) % 1 > 0.35){
+    const tw = c.measureText(promptTxt.slice(0, charN)).width;
+    c.fillStyle = '#818CF8';
+    c.fillRect(-pw/2 + 24 + tw, -10, 2.5, 20);
+  }
+
+  // Purple Send Button (Paper Airplane)
+  circ(c, pw/2 - 27, 0, 18);
+  c.fillStyle = col || '#6366F1';
+  c.fill();
+  c.strokeStyle = '#FFFFFF';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.moveTo(pw/2 - 32, -4);
+  c.lineTo(pw/2 - 20, 0);
+  c.lineTo(pw/2 - 32, 4);
+  c.lineTo(pw/2 - 28, 0);
+  c.closePath();
+  c.fill();
+
+  // Floating Suggestion Pill Above (Video 1 signature)
+  const sq = ease(Math.max(0, (lt - 0.35) / 0.4));
+  if(sq > 0){
+    c.save();
+    c.translate(0, -ph/2 - 22);
+    c.scale(sq, sq);
+    rr(c, -85, -13, 170, 26, 13);
+    c.fillStyle = 'rgba(99,102,241,0.25)';
+    c.fill();
+    c.strokeStyle = '#818CF8';
+    c.lineWidth = 1.5;
+    c.stroke();
+    c.font = '600 11px ui-monospace, monospace';
+    c.fillStyle = '#C7D2FE';
+    c.textAlign = 'center';
+    c.fillText('✦ generate keyframes', 0, 4);
+    c.restore();
+  }
+
+  c.restore();
+}
+
+/* 9. Animated Red Diagonal Rejection Marker Slash (Video 2) */
+function P_redSlash(c, lt, t, col, P, e, side, tx){
+  const q = outCubic(Math.min(1, lt / 0.55));
+  c.save();
+  c.scale(q, q);
+
+  const mw = 270, mh = 160;
+  // Mockup card underneath
+  rr(c, -mw/2, -mh/2, mw, mh, 12);
+  c.fillStyle = 'rgba(15,23,42,0.85)';
+  c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.12)';
+  c.lineWidth = 2;
+  c.stroke();
+
+  // Inner mockup lines
+  c.fillStyle = 'rgba(255,255,255,0.15)';
+  rr(c, -mw/2 + 20, -mh/2 + 20, 100, 16, 4); c.fill();
+  c.fillStyle = 'rgba(255,255,255,0.08)';
+  rr(c, -mw/2 + 20, -mh/2 + 48, 230, 36, 6); c.fill();
+  rr(c, -mw/2 + 20, -mh/2 + 96, 140, 22, 6); c.fill();
+
+  // Bold Red Diagonal Marker Slash (Video 2 signature)
+  const slashQ = outCubic(Math.max(0, (lt - 0.2) / 0.45));
+  if(slashQ > 0){
+    c.strokeStyle = '#EF4444';
+    c.lineWidth = 14;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(-mw/2 + 10, mh/2 - 10);
+    c.lineTo(-mw/2 + 10 + (mw - 20) * slashQ, mh/2 - 10 - (mh - 20) * slashQ);
+    c.stroke();
+
+    if(slashQ > 0.85){
+      c.save();
+      c.rotate(-0.15);
+      rr(c, -65, -18, 130, 36, 8);
+      c.fillStyle = '#EF4444';
+      c.fill();
+      c.font = '700 16px ui-monospace, monospace';
+      c.fillStyle = '#FFFFFF';
+      c.textAlign = 'center';
+      c.fillText('REJECTED', 0, 6);
+      c.restore();
+    }
+  }
+
+  c.restore();
+}
+
+/* ------------------------------------------------------------------ */
+/* REGISTER ALL 9 NEW PRIMITIVES IN SC TABLE                           */
+/* ------------------------------------------------------------------ */
+Object.assign(SC, {
+  codeTerminal:   {pose: 'present',    prop: P_codeTerminal},
+  bezierCurve:    {pose: 'demonstrate',prop: P_bezierCurve},
+  installProgress:{pose: 'clap',       prop: P_installProgress},
+  taskChecklist:  {pose: 'point',      prop: P_taskChecklist},
+  growthChart:    {pose: 'up',         prop: P_growthChart},
+  fannedFiles:    {pose: 'explain',    prop: P_fannedFiles},
+  costComparison: {pose: 'shrug',      prop: P_costComparison},
+  promptBar:      {pose: 'talk',       prop: P_promptBar},
+  redSlash:       {pose: 'shrug',      prop: P_redSlash}
+});
+
+/* ------------------------------------------------------------------ */
+/* REGISTER CONCEPT KEYWORDS FOR AUTO-DETECTION                        */
+/* ------------------------------------------------------------------ */
+CONCEPTS.push(
+  ['codeTerminal',   ['code','terminal','developer','program','script','coding','javascript','python','कोडिंग','प्रोग्रामिंग','सॉफ्टवेयर']],
+  ['bezierCurve',    ['motion','animation','bezier','curve','smooth','easing','keyframe','एनिमेशन','स्मूथ','मोशन']],
+  ['installProgress',['install','setup','download','progress','loading','complete','ready','इंस्टॉल','सेटअप','लोडिंग']],
+  ['taskChecklist',  ['task','todo','checklist','steps','execution','action items','pipeline','काम','टास्क','चेकलिस्ट']],
+  ['growthChart',    ['viral','growth','stars','github','trajectory','subscribers','views','audience','ग्रोथ','वायरल','सब्सक्राइबर']],
+  ['fannedFiles',    ['files','folder','documents','resources','assets','zip','skills','फाइल','फोल्डर','दस्तावेज']],
+  ['costComparison', ['cheap','cost','expensive','pricing','affordable','price compare','savings','सस्ता','महंगा','खर्चा','बचत']],
+  ['promptBar',      ['prompt','ai prompt','message','chatgpt','claude prompt','ask','input','प्रॉम्प्ट','सवाल']],
+  ['redSlash',       ['reject','wrong way','bad','mistake','outdated','noob','गलत','खारिज','पुराना']]
+);
+
+/* ------------------------------------------------------------------ */
+/* REGISTER SVG ICONS IN FREE LOCAL LIBRARY                            */
+/* ------------------------------------------------------------------ */
+LIB.push(
+  ['code terminal developer coding program कोडिंग',
+   '<rect x="12" y="18" width="76" height="64" rx="8" fill="#0F172A"/><circle cx="24" cy="30" r="4" fill="#EF4444"/><circle cx="36" cy="30" r="4" fill="#F59E0B"/><circle cx="48" cy="30" r="4" fill="#10B981"/><path d="M26 48l12 12-12 12M44 72h24" fill="none" stroke="#38BDF8" stroke-width="5" stroke-linecap="round"/>'],
+  ['bezier curve motion animation keyframe एनिमेशन',
+   '<path d="M16 76C36 76 64 24 84 24" fill="none" stroke="#6366F1" stroke-width="8" stroke-linecap="round"/><circle cx="16" cy="76" r="8" fill="#F59E0B"/><circle cx="84" cy="24" r="8" fill="#F59E0B"/><circle cx="50" cy="50" r="7" fill="#38BDF8"/>'],
+  ['install progress setup loading डाउनलोड इंस्टॉल',
+   '<rect x="16" y="24" width="68" height="52" rx="10" fill="#0F172A"/><rect x="26" y="52" width="48" height="12" rx="6" fill="#F97316"/><path d="M50 32v12M44 38l6 6 6-6" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>'],
+  ['checklist task pipeline todo कार्य चेकलिस्ट',
+   '<rect x="16" y="16" width="68" height="68" rx="10" fill="#0F172A"/><circle cx="30" cy="36" r="6" fill="#10B981"/><circle cx="30" cy="54" r="6" fill="#10B981"/><path d="M42 36h26M42 54h26" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>'],
+  ['growth chart viral stars trajectory ग्रोथ वायरल',
+   '<path d="M16 80h68M16 20v60" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="4"/><path d="M20 72Q46 70 58 48T80 24" fill="none" stroke="#EF4444" stroke-width="7" stroke-linecap="round"/><circle cx="80" cy="24" r="7" fill="#FFC93C"/>'],
+  ['files folder resources zip fanned फाइल',
+   '<rect x="18" y="24" width="36" height="52" rx="6" fill="#38BDF8"/><rect x="42" y="24" width="36" height="52" rx="6" fill="#F59E0B"/><path d="M30 40h16M54 40h16" fill="none" stroke="#fff" stroke-width="4"/>'],
+  ['cost expensive cheap pricing comparison सस्ता महंगा',
+   '<rect x="16" y="44" width="28" height="38" rx="6" fill="#6366F1"/><rect x="54" y="18" width="30" height="64" rx="6" fill="#EF4444"/><text x="30" y="70" font-size="20" fill="#fff" text-anchor="middle">$</text>'],
+  ['prompt message assistant chatgpt claude प्रॉम्प्ट',
+   '<rect x="10" y="32" width="80" height="36" rx="18" fill="#0F172A" stroke="#6366F1" stroke-width="4"/><circle cx="72" cy="50" r="12" fill="#6366F1"/>'],
+  ['reject slash mistake wrong outdated खारिज गलत',
+   '<rect x="16" y="20" width="68" height="60" rx="8" fill="#0F172A"/><path d="M20 74L80 26" stroke="#EF4444" stroke-width="9" stroke-linecap="round"/>']
+);
+
+})();
+</script>
 
 <script>
 /* ===== Phase 1: captions + editing foundation ===== */

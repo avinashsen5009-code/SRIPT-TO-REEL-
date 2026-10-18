@@ -48,3 +48,32 @@ Source: `reel-studio-site-v9.zip` → static PWA, one `index.html` (~133 KB, 3 i
 - All new compositions follow the existing design system (INK/DK palette, ease/outCubic physics, HF font stack, consistent stroke weights)
 - All 24 new scenes appear in the per-scene picker dropdown automatically (SC registration is the single source of truth)
 - No external assets, no paid APIs, no metered services
+
+## Part 4 — Studio Editorial Style & Reference Fusion (October 2026)
+
+### Visual Style: `studio` ("Studio Editorial")
+- **Visual Design System Fusion**: Merges the luxury editorial motion graphics from Video 1 (*Wink Guys*), the clean tech mascot & macOS UI execution from Video 2 (*Claude Code Skills*), and the expressive hand-drawn stickman character engine.
+- **Ambient Mesh Canvas & Technical Studio HUD**:
+  - Multi-point fluid ambient mesh gradient with 3 floating color orbs (royal indigo `#6366F1`, warm amber `#F59E0B`, pastel cyan `#38BDF8`) drifting smoothly over time.
+  - Studio technical HUD telemetry framing: top-left `[ STUDIO // REEL 01 ]`, top-right `01 / 27 • 24 FPS • 9:16`, bottom-left `stickman engine • 1080p • render`, bottom-right dynamic timecode (`0.00s // ACTIVE`).
+  - Active bottom hairline progress scrubber track with a glowing accent bead that moves synchronously with audio playback.
+  - Corner micro-crosshairs (`+`) at frame margins for technical precision.
+- **Clarity & Typography Hierarchy**:
+  - Integrated `Playfair Display` (editorial serif with italics) paired with `ui-monospace` technical labels.
+  - Uncompromising caption legibility anchored strictly within safe zones (`58.5%` height, clear of HUD and ground).
+  - High-contrast anti-aliasing on all canvas shapes, strokes, and text.
+- **8 Signature Visual Primitives Added from Reference Videos**:
+  1. `codeTerminal`: macOS dark window with red/yellow/green dots, typing syntax-highlighted code, yellow sticky note (`"10x faster"`) with bouncing arrow.
+  2. `bezierCurve`: Smooth cubic Bézier S-curve easing graph with keyframe diamonds, rolling velocity bead, and `"premium motion"` tag.
+  3. `installProgress`: Progress card with retro pixel bot mascot, live progress bar ticking `0% -> 100%`, and status subtext.
+  4. `taskChecklist`: macOS card with 4 execution pipeline tasks turning green with `[DONE]` badges in sequence.
+  5. `growthChart`: GitHub star history / exponential growth curve with date axes, rising red trajectory curve, and glowing star.
+  6. `fannedFiles`: 4 fanned document icons (`SKILL.md`, `brand.pdf`, `assets/`, `bundle.zip`) with numbered arrows (`1, 2, 3, 4`) and mouse cursor.
+  7. `costComparison`: Low-cost local bar with `$` vs tall diagonal-striped tower with `$$$$$` and `10X EXPENSE` tag.
+  8. `promptBar`: Pill-shaped AI chat prompt bar (`"message assistant..."`) with blinking purple cursor and send button.
+  9. `redSlash`: Mockup UI card with an animated bold diagonal red marker slash and `"REJECTED"` stamp.
+- **Total Library Counts**:
+  - Visual Primitives in `SC`: **82** (was 73)
+  - Concept Keyword Groups in `CONCEPTS`: **71** (was 62)
+  - SVG Icon Library in `LIB`: **95** (was 86)
+- **Zero API / Cloud Dependencies**: Pure client-side Canvas 2D/SVG execution.

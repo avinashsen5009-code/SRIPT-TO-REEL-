@@ -121,3 +121,36 @@ Known limits:
 - `P_algo` uses Unicode emoji (👁) via canvas fillText; rendering fidelity depends on the emoji font available in the browser.
 - `P_lossAversion` tilts the scale to always show losses heavier (fixed 18° tilt) — this is an illustrative visualization, not a data chart.
 - Art direction pose cycling is per-build: if the script is rebuilt (new audio or new text), poses are reassigned. Pinned visuals (OVR[i]) override the scene ID but artPose still applies to the chosen scene's character.
+
+## Part 4: Studio Editorial Style (Wink Guys & Claude Skills Reference Fusion) (done)
+Decisions:
+- New Reel Style `studio` ("Studio Editorial: Luxury mesh, tech HUD & stickman operator"): Combines the high-end luxury editorial aesthetic from Video 1 (Wink Guys), the clean tech mascot & macOS UI execution from Video 2 (Claude Code Skills), and the expressive hand-drawn stickman engine into a unified, professional motion graphics system.
+- Canvas & Studio HUD Frame:
+  - Ambient multi-point radial mesh glow (warm amber, royal indigo, pastel cyan) drifting smoothly over deep slate or alabaster cream canvas base.
+  - Studio technical HUD telemetry: top-left `[ STUDIO // REEL 01 ]` and `EDIT MODE '26`, top-right `01 / 27 • 24 FPS • 9:16`, bottom-left `stickman engine • 1080p • render`, bottom-right timecode telemetry, corner micro-crosshairs (`+`).
+  - Active bottom hairline playback scrubber track with glowing accent bead that moves synchronously with audio playback time.
+- Typography & Clarity First:
+  - Added Google Font `Playfair Display` (editorial high-contrast serif with italics) paired with `ui-monospace` technical labels.
+  - Fallback stack `HFE`: `'Playfair Display', Georgia, 'Times New Roman', serif`.
+  - Captions remain strictly inside safe zone guidelines (centered at 58.5% of height), with maximum contrast, zero overlap with studio HUD, and crisp anti-aliasing.
+- 9 Signature Visual Primitives Added from Reference Videos:
+  1. `codeTerminal`: macOS dark window with red/yellow/green header dots, syntax-highlighted code lines typing in progressively, paired with a tilted yellow sticky note (`"10x faster"`) and bouncing arrow.
+  2. `bezierCurve`: Smooth cubic Bézier S-curve easing graph with keyframe diamond handles, rolling velocity bead, and `"premium motion"` telemetry pill.
+  3. `installProgress`: Progress card with retro pixel bot mascot, live progress bar ticking `0% -> 100%`, and status subtext (`"Ready to use ✓"`).
+  4. `taskChecklist`: Floating card with 4 execution pipeline tasks turning green with `[DONE]` badges in real-time.
+  5. `growthChart`: GitHub star history / exponential growth curve with date axes (Oct/Jan/Apr), rising red trajectory curve, and glowing star icon.
+  6. `fannedFiles`: 4 fanned document icons (`SKILL.md`, `brand.pdf`, `assets/`, `bundle.zip`) with numbered arrows (`1, 2, 3, 4`) and animated blue mouse cursor.
+  7. `costComparison`: Low-cost local bar with `$` vs tall diagonal-striped tower with `$$$$$` and `10X EXPENSE` badge.
+  8. `promptBar`: Pill-shaped AI chat prompt bar (`"message assistant..."`) with blinking purple cursor, paper airplane send button, and floating suggestion pill.
+  9. `redSlash`: Mockup UI card with an animated bold diagonal red marker slash and `"REJECTED"` stamp for contrast/problem scenes.
+- Total library counts after expansion:
+  - 82 visual primitives in `SC` (up from 73)
+  - 71 concept keyword categories in `CONCEPTS` (up from 62)
+  - 95 SVG icon entries in `LIB` (up from 86)
+- Palette: Added `PAL.studio` (Indigo `#6366F1`, Amber `#F59E0B`, Cyan `#38BDF8`, Emerald `#10B981`, Dark `#090D16`).
+
+Changed: `index.html` (Google Font link, `#th` Studio option, `#sty` Studio option, `PAL.studio`, Part 4 Studio script block), `IMPLEMENTATION_LOG.md`, `PROJECT_AUDIT.md`.
+
+Tests (Automated headless Chrome CDP test suite):
+- `test_studio.js`: Verified `#sty=studio`, `#th=studio`, `PAL.studio`, and rendered all 9 new primitives on canvas (0 runtime errors).
+- `test_browser.js`: Full 15-check regression suite all passed (exit code 0).
