@@ -66,12 +66,15 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 <button id="cn" type="button" hidden>Cancel</button>
 <button id="sample" type="button">Use sample script</button>
 <button id="mic" type="button">Record mic</button>
+<button id="bm" type="button">Music mode (beat cuts)</button>
 </div>
 <div class="row">
 <label>Style
 <select id="th" class="big"><option value="cine">Cinematic</option><option value="neon">Neon pop</option><option value="gold">Black and gold</option><option value="fire">Fire red</option></select></label>
 <label>Handle on video (optional)
 <input type="text" id="hd" placeholder="@yourname"></label>
+<label>Reel style
+<select id="sty" class="big"><option value="trend" selected>Trending: big word captions, punch cuts</option><option value="classic">Classic: small captions</option></select></label>
 </div>
 <div class="bar">
 <label class="chk"><input type="checkbox" id="ab"> Use web photos instead of illustrations (optional)</label>
@@ -79,12 +82,12 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 </div>
 <p class="mute" id="vs" role="status"></p>
 <p class="mute" id="st" role="status">Paste your script, upload the voiceover, then press Build reel from script. No internet needed.</p>
-<details open>
-<summary>AI Director: custom visuals for every word</summary>
+<details>
+<summary>Optional paid AI Director (custom-drawn visuals)</summary>
 <div style="display:grid;gap:10px;margin-top:10px">
 <p class="mute">The AI reads each sentence and draws the exact objects, people and numbers it mentions, timed to the spoken word. It needs your own Anthropic API key, kept only in this browser.</p>
 <div class="row"><label>API key<input type="password" id="ak" placeholder="sk-ant-..." autocomplete="off"></label><label>Model<input type="text" id="am" value="claude-sonnet-5-5"></label></div>
-<div class="bar"><label class="chk"><input type="checkbox" id="ai"> Use AI visuals</label><button id="ag" type="button" class="pri">Design visuals with AI</button></div>
+<div class="bar"><label class="chk"><input type="checkbox" id="ai" checked> Use smart visuals</label><button id="ag" type="button" class="pri">Design visuals with AI</button></div>
 <p class="mute" id="as" role="status"></p></div>
 </details>
 <details>
@@ -195,7 +198,7 @@ function autoCuts(){
   }
   return found;
 }
-function resetMedia(){AIV.length=0;abRun++;media.forEach((m,i)=>{if(m)clearMedia(i)});media=[];vidIdx=-1;credits()}
+function resetMedia(){mus=false;AIV.length=0;abRun++;media.forEach((m,i)=>{if(m)clearMedia(i)});media=[];vidIdx=-1;credits()}
 function align(){
   autoW=null;resetMedia();sents=split($('#sc').value);tplPick=[];
   if(!buf||!sents.length){
@@ -204,7 +207,7 @@ function align(){
   }
   const f=autoCuts(),n=sents.length-1;
   setSt(sents.length+' scenes · '+buf.duration.toFixed(1)+' s · '+f+' of '+n+' cuts snapped to pauses'+(f<n?'. The rest are estimated, so drag the markers to fix them.':'.'));
-  refresh();autoBroll();
+  refresh();freeAll();autoBroll();
 }
 
 /* ---------- automatic transcription ---------- */
@@ -250,7 +253,7 @@ function finishTranscript(chunks,seg){
   }
   $('#sc').value=sents.join('\n');
   setSt('Done: '+ws.length+' words in '+sents.length+' scenes. Check the script box above, then press Export video.');
-  refresh();autoBroll();
+  refresh();freeAll();autoBroll();
 }
 async function loadAsr(id,onProg){
   let last=null;
@@ -896,16 +899,17 @@ function drawPrev(t){
   let bi=0;bs.forEach((x,k)=>{if(t>=x.s)bi=k});const B=bs[bi];
   let ci=0;ch.forEach((x,k)=>{if(t>=x.s)ci=k});const C=ch[ci],ct=C?t-C.s:9;
   const col=P.acc[(B?B.g:i)%P.acc.length],blt=B?Math.max(0,t-B.s):lt,bdur=B?Math.max(.4,B.e-B.s):1,bp=Math.min(1,blt/bdur),e=envAt(t);
-  const dir=B&&B.flip?-1:1,punch=1.03+.07*Math.exp(-blt*9)+.05*bp+(i>0?.1*Math.exp(-lt*12):0),sh=Math.exp(-lt*12)*8;
+  const dir=B&&B.flip?-1:1,punch=1.03+(trend()?.15:.07)*Math.exp(-blt*9)+.05*bp+(i>0?.1*Math.exp(-lt*12):0),sh=Math.exp(-lt*12)*8;
   c.save();
   c.translate(W/2+Math.sin(lt*90)*sh+dir*(bp-.5)*26,H/2+Math.cos(lt*70)*sh*.6);c.scale(punch,punch);c.translate(-W/2,-H/2);
   if(ready(M))broll(c,M,p,i,col,P,t);
   else if($('#ai').checked&&AIV[i]&&AIV[i].ok)aiDraw(c,i,t,P,col);
   else{stageBg(c,P,t,col);if(B)stageFit(c,B.scene,blt,t,col,P,e,B.flip,B.txt)}
   c.restore();
+  if(trend()&&bi>0){c.fillStyle='rgba(255,255,255,'+(.4*Math.exp(-blt*16)).toFixed(3)+')';c.fillRect(0,0,W,H)}
   const sg=c.createLinearGradient(0,880,0,H);sg.addColorStop(0,'rgba(0,0,0,0)');sg.addColorStop(1,'rgba(0,0,0,.55)');
   c.fillStyle=sg;c.fillRect(0,880,W,H-880);
-  caption(c,C,t,ct,col,P);
+  if(!mus)(trend()?capBig:caption)(c,C,t,ct,col,P);
   const n=sents.length,gap=6,w=(W-80-gap*(n-1))/n;
   for(let k=0;k<n;k++){
     const x=40+k*(w+gap);c.fillStyle='rgba(255,255,255,.28)';rr(c,x,56,w,8,4);c.fill();
@@ -1052,10 +1056,10 @@ async function aiAll(only,hint){
   $('#ai').checked=true;
   for(let n=0;n<idx.length;n+=2){
     as.textContent='Designing scene '+(idx[n]+1)+' of '+sents.length+'…';
-    await Promise.all(idx.slice(n,n+2).map(async i=>{try{AIV[i]=await aiScene(i,hint)}catch(e){fail++;le=e.message;AIV[i]=null}}));
+    await Promise.all(idx.slice(n,n+2).map(async i=>{try{AIV[i]=await aiScene(i,hint)}catch(e){fail++;le=e.message;AIV[i]=await freeScene(i)}}));
     if(my!==aiRun)return;frame();
   }
-  as.textContent=fail?fail+' scene(s) failed and use built-in graphics ('+le+'). Use "AI visual" on those scenes to retry.':'All scenes designed. Press Play to review; use "Redo AI visual" on any scene, with a note if you want something specific.';
+  as.textContent=fail?fail+' scene(s) failed and use the free library visuals ('+le+'). Use "AI visual" on those scenes to retry.':'All scenes designed. Press Play to review; use "Redo AI visual" on any scene, with a note if you want something specific.';
   renderList();frame();
 }
 function aiDraw(c,i,t,P,col){
@@ -1070,6 +1074,7 @@ function aiDraw(c,i,t,P,col){
     const lt=t-st,e=ease(lt/.45);let x=l.x,y=l.y,sc=Math.max(.001,e),rot=0;
     switch(l.in){case'slide-up':y+=(1-e)*160;sc=1;break;case'slide-left':x-=(1-e)*260;sc=1;break;case'slide-right':x+=(1-e)*260;sc=1;break;case'drop':y-=(1-e)*300;sc=1;break;case'fade':sc=.95+.05*Math.min(1,lt/.3);break;case'zoom':sc=.4+.6*e;break}
     if(l.loop==='float')y+=Math.sin(lt*2.4+l.at)*10;else if(l.loop==='pulse')sc*=1+Math.sin(lt*5)*.04;else if(l.loop==='spin')rot=lt*1.2;else if(l.loop==='sway')rot=Math.sin(lt*3)*.08;
+    if(mus)sc*=1+envAt(t)*.14;
     c.save();c.globalAlpha=Math.min(1,lt/.2)*fade;c.translate(x,y);c.rotate(rot);c.scale(sc,sc);
     if(l.text!==undefined){
       c.font='800 '+l.s+'px '+HF;c.textAlign='center';c.textBaseline='middle';c.lineJoin='round';
@@ -1081,6 +1086,187 @@ function aiDraw(c,i,t,P,col){
     }
     c.restore();
   });
+}
+/* FREE START */
+const sv=b=>"<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><g stroke='#14202E' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'>"+b+'</g></svg>';
+const LIB=[
+['पैसा पैसे पैसों कमाई रुपये रुपए धन अमीर पगार money cash income rich salary','<rect x="8" y="28" width="84" height="46" rx="8" fill="#3DD68C"/><circle cx="50" cy="51" r="13" fill="#FFC93C"/><circle cx="22" cy="51" r="4" fill="#fff"/><circle cx="78" cy="51" r="4" fill="#fff"/>'],
+['दिमाग दिमाग़ सोच सोचना मन brain mind think thinking','<path d="M50 20c-10-8-28-2-28 14-8 6-6 20 4 24 2 14 18 18 24 8 6 10 22 6 24-8 10-4 12-18 4-24 0-16-18-22-28-14z" fill="#FF9EC4"/><path d="M50 22v54M34 40c6 0 10 4 10 10M66 40c-6 0-10 4-10 10" fill="none"/>'],
+['आइडिया विचार समझ idea ideas creative','<path d="M50 10a26 26 0 0112 49v8H38v-8A26 26 0 0150 10z" fill="#FFC93C"/><rect x="38" y="67" width="24" height="10" rx="3" fill="#B8C4D2"/><path d="M42 84h16M42 40l8 10 8-10" fill="none"/>'],
+['समय वक्त वक़्त टाइम घंटा घंटे मिनट देर जल्दी दिन time hour minute deadline','<circle cx="50" cy="52" r="38" fill="#fff"/><path d="M50 52V28M50 52l16 10M36 10l-8 8M64 10l8 8" fill="none"/><circle cx="50" cy="52" r="4" fill="#14202E"/>'],
+['प्यार दिल रिश्ता रिश्ते परिवार love heart family','<path d="M50 86C14 62 12 32 32 24c10-4 16 2 18 8 2-6 8-12 18-8 20 8 18 38-18 62z" fill="#FF5A5F"/><path d="M30 34c2-4 6-6 10-5" fill="none" stroke="#fff"/>'],
+['शुरू स्टार्ट लॉन्च बिज़नेस बिजनेस तेज़ तेज launch start startup business speed','<path d="M50 8c14 12 18 34 12 52H38C32 42 36 20 50 8z" fill="#fff"/><circle cx="50" cy="36" r="8" fill="#4DA8FF"/><path d="M38 52L22 66l4 10 14-8zM62 52l16 14-4 10-14-8z" fill="#FF5A5F"/><path d="M42 62h16l-8 26z" fill="#FFC93C"/>'],
+['जीत जीतना विजेता सफल सफलता अवॉर्ड success win winner champion award','<path d="M30 14h40v22a20 20 0 01-40 0z" fill="#FFC93C"/><path d="M30 20H14c0 16 8 22 18 22M70 20h16c0 16-8 22-18 22M50 56v16" fill="none"/><rect x="32" y="72" width="36" height="14" rx="4" fill="#FF8A3D"/>'],
+['सुरक्षा सिक्योरिटी लॉक राज पासवर्ड security safe secret password privacy','<path d="M30 46V32a20 20 0 0140 0v14" fill="none"/><rect x="20" y="44" width="60" height="44" rx="8" fill="#FFC93C"/><circle cx="50" cy="64" r="6" fill="#14202E"/>'],
+['देख देखना नज़र नजर ध्यान look watch see focus attention','<path d="M6 50C22 22 78 22 94 50 78 78 22 78 6 50z" fill="#fff"/><circle cx="50" cy="50" r="18" fill="#4DA8FF"/><circle cx="50" cy="50" r="8" fill="#14202E"/>'],
+['फोन मोबाइल सोशल इंस्टाग्राम रील ऐप स्क्रीन phone mobile social instagram reels app screen','<rect x="28" y="6" width="44" height="88" rx="10" fill="#9B7BFF"/><rect x="34" y="18" width="32" height="56" rx="3" fill="#fff"/><circle cx="50" cy="84" r="3" fill="#fff"/>'],
+['किताब पढ़ पढ़ाई पढाई सीख ज्ञान स्कूल book read learn study education school','<path d="M8 22c16-6 30-4 42 6v56C38 76 24 74 8 80zM92 22c-16-6-30-4-42 6v56c12-8 26-10 42-4z" fill="#4DA8FF"/>'],
+['लक्ष्य गोल टारगेट मंज़िल मंजिल योजना प्लान goal target aim plan','<circle cx="50" cy="50" r="40" fill="#fff"/><circle cx="50" cy="50" r="26" fill="#FF5A5F"/><circle cx="50" cy="50" r="12" fill="#fff"/><path d="M50 50L84 16M76 8v12h12" fill="none"/>'],
+['आग जुनून मेहनत पैशन जोश ऊर्जा passion fire energy burn','<path d="M50 6c4 18 28 26 28 52a28 28 0 01-56 0c0-14 8-20 12-30 6 6 6 12 10 14 0-14 2-22 6-36z" fill="#FF8A3D"/><path d="M50 52c10 10 14 14 14 24a14 14 0 01-28 0c0-8 6-12 14-24z" fill="#FFC93C"/>'],
+['ग्रोथ बढ़ बढ़ोतरी तरक्की मुनाफा मुनाफ़ा निवेश सुधार growth grow increase profit stock invest improve progress','<path d="M10 10v80h82" fill="none"/><path d="M20 74l22-24 14 12 30-40M72 22h16v16" fill="none" stroke="#3DD68C" stroke-width="7"/>'],
+['खतरा खतरे गलती सावधान नुकसान डर समस्या परेशानी रिस्क धोखा warning danger mistake careful never avoid problem risk scam','<path d="M50 8L94 88H6z" fill="#FFC93C"/><path d="M50 36v26" stroke-width="7" fill="none"/><circle cx="50" cy="75" r="4" fill="#14202E"/>'],
+['क्यों कैसे क्या कौन सवाल why how what who question','<circle cx="50" cy="50" r="42" fill="#9B7BFF"/><path d="M36 38c0-18 28-18 28 0 0 12-14 12-14 26" fill="none" stroke="#fff" stroke-width="8"/><circle cx="50" cy="78" r="5" fill="#fff"/>'],
+['सही समाधान हल सच done correct right solution yes','<circle cx="50" cy="50" r="42" fill="#3DD68C"/><path d="M28 52l16 16 30-34" fill="none" stroke="#fff" stroke-width="9"/>'],
+['लोग लोगों दोस्त टीम भीड़ इंसान समाज ग्राहक people friends team crowd audience customer everyone society','<circle cx="50" cy="28" r="14" fill="#FFD3A8"/><path d="M24 88c0-22 12-34 26-34s26 12 26 34z" fill="#4DA8FF"/><circle cx="20" cy="40" r="10" fill="#FFD3A8"/><circle cx="80" cy="40" r="10" fill="#FFD3A8"/><path d="M2 84c0-16 8-26 18-26M98 84c0-16-8-26-18-26" fill="none"/>'],
+['सुबह सूरज धूप सवेरा खुशी खुश मुस्कान morning sun sunrise happy smile','<circle cx="50" cy="50" r="22" fill="#FFC93C"/><path d="M50 8v12M50 80v12M8 50h12M80 50h12M20 20l8 8M72 72l8 8M80 20l-8 8M28 72l-8 8" fill="none"/>'],
+['नींद सोना रात थकान आराम sleep night tired rest','<path d="M64 10A40 40 0 1064 90 32 32 0 0164 10z" fill="#FFC93C"/><path d="M76 20h12l-12 12h12" fill="none"/>'],
+['पौधा पेड़ बीज प्रकृति आदत आदतें plant tree seed nature habit habits','<path d="M50 88V46" fill="none"/><path d="M50 56C30 56 22 44 22 30c18 0 28 8 28 26zM50 46C50 28 62 18 80 18c0 16-12 28-30 28z" fill="#3DD68C"/><path d="M30 88h40l-6-18H36z" fill="#FF8A3D"/>'],
+['जिम फिटनेस कसरत एक्सरसाइज व्यायाम ताकत मजबूत सेहत स्वास्थ्य gym fitness exercise workout muscle strong health','<path d="M26 50h48" stroke-width="7" fill="none"/><rect x="14" y="28" width="14" height="44" rx="4" fill="#4DA8FF"/><rect x="72" y="28" width="14" height="44" rx="4" fill="#4DA8FF"/><rect x="4" y="38" width="10" height="24" rx="3" fill="#9B7BFF"/><rect x="86" y="38" width="10" height="24" rx="3" fill="#9B7BFF"/>'],
+['खाना खाने पिज़्ज़ा बर्गर भूख रेस्टोरेंट food eat pizza burger hungry restaurant meal','<path d="M12 44c0-22 76-22 76 0z" fill="#FF8A3D"/><rect x="10" y="48" width="80" height="10" rx="5" fill="#3DD68C"/><rect x="14" y="60" width="72" height="10" rx="4" fill="#8B4A2B"/><path d="M12 74h76c0 12-10 16-38 16S12 86 12 74z" fill="#FF8A3D"/>'],
+['चाय कॉफी coffee tea chai','<path d="M14 36h56v26a24 24 0 01-24 24h-8a24 24 0 01-24-24z" fill="#fff"/><path d="M70 42h8a10 10 0 010 22h-8M32 12c-6 6 6 10 0 18M48 12c-6 6 6 10 0 18" fill="none"/><path d="M20 42h44v10H20z" fill="#C98A5B"/>'],
+['गाड़ी कार बाइक सड़क ट्रैफिक car drive driving road traffic vehicle','<path d="M8 62l8-22c2-6 8-10 14-10h40c6 0 10 4 14 12l8 20z" fill="#FF5A5F"/><path d="M22 40h20v14H18zM48 40h22l6 14H48z" fill="#B8E4FF"/><rect x="6" y="58" width="88" height="14" rx="6" fill="#FF5A5F"/><circle cx="28" cy="74" r="10" fill="#14202E"/><circle cx="72" cy="74" r="10" fill="#14202E"/><circle cx="28" cy="74" r="4" fill="#B8C4D2"/><circle cx="72" cy="74" r="4" fill="#B8C4D2"/>'],
+['फ्लाइट हवाई जहाज़ जहाज एयरपोर्ट flight plane fly airport abroad','<path d="M6 54l86-30-22 52-18-18-14 14-4-18z" fill="#fff"/><path d="M48 58l22-30" fill="none"/>'],
+['घर मकान फ्लैट home house flat property','<path d="M8 50L50 12l42 38z" fill="#FF5A5F"/><rect x="18" y="48" width="64" height="42" fill="#FFC93C"/><rect x="42" y="62" width="16" height="28" fill="#9B7BFF"/>'],
+['डिग्री कॉलेज परीक्षा एग्ज़ाम विद्यार्थी degree college exam graduate university student','<path d="M50 18L94 40 50 62 6 40z" fill="#14202E"/><path d="M24 52v20c14 12 38 12 52 0V52L50 66z" fill="#4DA8FF"/><path d="M88 44v26" fill="none"/>'],
+['काम नौकरी जॉब ऑफिस बॉस करियर job work office boss career','<rect x="8" y="30" width="84" height="56" rx="8" fill="#B07A4F"/><path d="M34 30V20h32v10M8 54h84" fill="none"/><rect x="44" y="50" width="12" height="10" fill="#FFC93C"/>'],
+['कंप्यूटर लैपटॉप कोडिंग इंटरनेट ऑनलाइन एआई computer laptop code coding internet online ai website','<rect x="16" y="22" width="68" height="46" rx="5" fill="#9B7BFF"/><rect x="22" y="28" width="56" height="34" fill="#fff"/><path d="M6 74h88l-6 10H12z" fill="#B8C4D2"/><path d="M36 40l6 6-6 6M50 52h12" fill="none"/>'],
+['दुख उदास रोना तनाव अकेला निराश sad cry stress lonely depression anxiety','<circle cx="50" cy="50" r="42" fill="#FFC93C"/><circle cx="36" cy="42" r="4" fill="#14202E"/><circle cx="64" cy="42" r="4" fill="#14202E"/><path d="M34 70c8-10 24-10 32 0" fill="none"/><path d="M72 52c4 8 4 12 0 14-4-2-4-6 0-14z" fill="#4DA8FF" stroke-width="2"/>'],
+['दिवाली दीपक दीया त्योहार त्यौहार पूजा होली diwali festival diya puja holi celebration','<path d="M10 56h80c0 20-16 30-40 30S10 76 10 56z" fill="#FF8A3D"/><path d="M50 12c10 10 12 20 0 32-12-12-10-22 0-32z" fill="#FFC93C"/>'],
+['डॉक्टर दवा दवाई अस्पताल बीमारी इलाज doctor medicine hospital disease treatment medical','<rect x="12" y="12" width="76" height="76" rx="16" fill="#fff"/><path d="M50 28v44M28 50h44" fill="none" stroke="#FF5A5F" stroke-width="12"/>'],
+['बारिश पानी बादल मौसम rain water cloud weather','<path d="M26 56a16 16 0 010-32 22 22 0 0142-4 18 18 0 018 36z" fill="#B8E4FF"/><path d="M34 66v14M50 70v16M66 66v14" fill="none" stroke="#4DA8FF" stroke-width="6"/>'],
+['पहाड़ पहाड यात्रा सफर सफ़र घूमना mountain travel trip journey adventure hiking','<path d="M4 82L34 28l16 26 14-18 32 46z" fill="#6F8FAF"/><path d="M34 28l-10 18 10-4 8 6z" fill="#fff"/><circle cx="76" cy="22" r="10" fill="#FFC93C"/>'],
+['कैमरा फोटो वीडियो यूट्यूब वायरल camera photo video youtube film shoot viral','<rect x="8" y="28" width="84" height="56" rx="10" fill="#2B3A4F"/><path d="M32 28l6-10h24l6 10" fill="#9B7BFF"/><circle cx="50" cy="56" r="18" fill="#B8C4D2"/><circle cx="50" cy="56" r="9" fill="#4DA8FF"/>'],
+['गाना गाने संगीत म्यूज़िक डांस music song sing dance','<path d="M36 74V24l44-10v50" fill="none"/><circle cx="26" cy="74" r="11" fill="#FF5A5F"/><circle cx="70" cy="64" r="11" fill="#FF5A5F"/><path d="M36 24l44-10v14l-44 10z" fill="#FFC93C"/>'],
+['तोहफा गिफ्ट उपहार जन्मदिन पार्टी gift present birthday party surprise','<rect x="12" y="38" width="76" height="50" rx="4" fill="#FF5A5F"/><rect x="8" y="26" width="84" height="16" rx="4" fill="#FF8A3D"/><path d="M50 26v62" fill="none" stroke="#FFC93C" stroke-width="10"/><path d="M50 26c-16-18-26-2-12 0M50 26c16-18 26-2 12 0" fill="none"/>'],
+['खरीद खरीदना शॉपिंग दुकान बाज़ार बाजार ऑफर सेल shopping buy sale offer discount store market','<path d="M6 16h14l12 48h46l10-34H26" fill="#FFC93C"/><circle cx="38" cy="78" r="7" fill="#14202E"/><circle cx="72" cy="78" r="7" fill="#14202E"/>'],
+['कार्ड क्रेडिट लोन ईएमआई यूपीआई बैंक card credit loan emi upi bank debt','<rect x="8" y="22" width="84" height="56" rx="8" fill="#4DA8FF"/><rect x="8" y="34" width="84" height="12" fill="#14202E"/><rect x="18" y="58" width="26" height="8" rx="2" fill="#fff"/>'],
+['सोना सोने गोल्ड चांदी बिटकॉइन क्रिप्टो gold silver bitcoin crypto','<path d="M10 70l12-26h56l12 26z" fill="#FFC93C"/><path d="M26 44l8-22h32l8 22" fill="#FFB347"/><path d="M30 58h40" fill="none" stroke-width="3"/>'],
+['क्रिकेट फुटबॉल खेल मैच खिलाड़ी cricket football sport sports match game player ball','<circle cx="50" cy="50" r="40" fill="#fff"/><path d="M50 10v80M10 50h80M22 22c14 10 14 46 0 56M78 22c-14 10-14 46 0 56" fill="none"/>'],
+['कुत्ता कुत्ते बिल्ली पालतू जानवर dog puppy cat pet animal','<path d="M18 30L6 54l20 6zM82 30l12 24-20 6z" fill="#8B4A2B"/><circle cx="50" cy="52" r="32" fill="#D9A066"/><circle cx="38" cy="46" r="4" fill="#14202E"/><circle cx="62" cy="46" r="4" fill="#14202E"/><ellipse cx="50" cy="62" rx="8" ry="6" fill="#14202E"/>'],
+['गुस्सा गुस्से नफरत झगड़ा angry anger hate fight','<circle cx="50" cy="50" r="42" fill="#FF5A5F"/><path d="M26 34l18 8M74 34l-18 8" fill="none" stroke-width="6"/><circle cx="36" cy="48" r="4" fill="#14202E"/><circle cx="64" cy="48" r="4" fill="#14202E"/><path d="M34 74c10-10 22-10 32 0" fill="none"/>'],
+['हैरान चौंक अचानक वाह shocked shock wow surprised suddenly unbelievable','<circle cx="50" cy="50" r="42" fill="#FFC93C"/><circle cx="36" cy="42" r="7" fill="#fff"/><circle cx="64" cy="42" r="7" fill="#fff"/><circle cx="36" cy="42" r="3" fill="#14202E"/><circle cx="64" cy="42" r="3" fill="#14202E"/><ellipse cx="50" cy="70" rx="9" ry="12" fill="#14202E"/>'],
+['ठंड सर्दी बर्फ winter snow cold freeze','<path d="M50 8v84M14 29l72 42M86 29L14 71" fill="none" stroke="#B8E4FF" stroke-width="7"/><circle cx="50" cy="50" r="8" fill="#fff"/>'],
+['भारत देश तिरंगा इंडिया india country flag nation','<path d="M22 10v82" fill="none"/><path d="M22 14h60v44H22z" fill="#fff"/><path d="M22 14h60v15H22z" fill="#FF9933"/><path d="M22 43h60v15H22z" fill="#3DD68C"/><circle cx="52" cy="36" r="6" fill="#4DA8FF"/>'],
+['बात बातचीत मैसेज चैट बोलना कहना message chat whatsapp talk say speak','<path d="M10 14h60v40H38L22 68V54H10z" fill="#4DA8FF"/><path d="M40 40h50v34H78v12L64 74H40z" fill="#fff"/>'],
+['नोटिफिकेशन अलर्ट रिमाइंडर याद notification alert reminder bell remember','<path d="M50 10c18 0 26 14 26 34v14l8 12H16l8-12V44c0-20 8-34 26-34z" fill="#FFC93C"/><circle cx="50" cy="84" r="8" fill="#FF8A3D"/>'],
+['हंसी हँसी हंसना मज़ा मजा मज़ेदार जोक funny laugh joke fun lol comedy','<circle cx="50" cy="50" r="42" fill="#FFC93C"/><path d="M26 40q8-8 16 0M58 40q8-8 16 0" fill="none"/><path d="M24 56h52c0 22-12 30-26 30S24 78 24 56z" fill="#fff"/><path d="M36 72q14 10 28 0" fill="#FF5A5F"/>'],
+['तूफान तूफ़ान बिजली आंधी storm lightning thunder','<path d="M26 50a16 16 0 010-32 22 22 0 0142-4 18 18 0 018 36z" fill="#6F8FAF"/><path d="M54 46l-14 22h12l-8 22 24-30H54l8-14z" fill="#FFC93C"/>'],
+['बच्चा बच्चे बच्चों बेटा बेटी माँ मां पापा बेबी baby kid kids child children mother father mom dad','<circle cx="50" cy="52" r="34" fill="#FFD3A8"/><path d="M44 18c4-8 12-8 14 0" fill="none"/><circle cx="38" cy="52" r="4" fill="#14202E"/><circle cx="62" cy="52" r="4" fill="#14202E"/><path d="M40 68q10 8 20 0" fill="none"/><circle cx="26" cy="62" r="5" fill="#FF9EC4" stroke-width="0"/><circle cx="74" cy="62" r="5" fill="#FF9EC4" stroke-width="0"/>'],
+['ट्रेन रेल बस मेट्रो स्टेशन train bus metro station railway','<rect x="22" y="12" width="56" height="62" rx="12" fill="#4DA8FF"/><rect x="30" y="22" width="40" height="22" rx="4" fill="#fff"/><circle cx="36" cy="58" r="5" fill="#FFC93C"/><circle cx="64" cy="58" r="5" fill="#FFC93C"/><path d="M30 74l-10 16M70 74l10 16M16 90h68" fill="none"/>'],
+['कॉन्फिडेंस कॉन्फिडेंट एटीट्यूड स्वैग स्टाइल cool confident confidence attitude swag style','<circle cx="50" cy="50" r="42" fill="#FFC93C"/><path d="M14 38h72v8c0 8-8 12-16 12s-14-4-16-12h-8c-2 8-8 12-16 12s-16-4-16-12z" fill="#14202E"/><path d="M34 72q16 12 32 0" fill="none"/>']
+];
+const LKW=LIB.map(x=>x[0].split(' ').map(nz)),LC={};
+const libImg=async n=>LC[n]||(LC[n]=await svgImg(sv(LIB[n][1])));
+const cln=w=>nz(w.toLowerCase()).replace(/[।?!.,"'’‘“”:;\-()]/g,'');
+const libHit=w=>{const c=cln(w);if(!c)return -1;for(let n=0;n<LKW.length;n++)if(LKW[n].some(k=>c===k||(k.length>=3&&c.startsWith(k))))return n;return -1};
+const POS=[[[360,490,400]],[[220,520,290],[500,520,290]],[[360,360,280],[210,650,260],[510,650,260]],[[215,380,250],[505,380,250],[215,650,250],[505,650,250]]];
+async function freeScene(i){
+  const ws=sents[i].split(/\s+/).filter(Boolean),beats=[],IN=['pop','slide-up','drop','zoom','slide-left','slide-right'],LP=['float','pulse','sway'],tr=w=>w.replace(/[।?!.,"'’‘“”:;]+$/,'');
+  for(let w0=0,b=0,w1;w0<ws.length;w0=w1+1,b++){
+    w1=ws.length-w0-4<=1?ws.length-1:w0+3;const H=[],used=new Set();let num=null,key=null;
+    for(let k=w0;k<=w1;k++){
+      const c=cln(ws[k]),h=libHit(ws[k]);
+      if(/[0-9०-९]/.test(c)&&!num)num={w:tr(ws[k]),k};
+      if(h>=0&&!used.has(h)&&used.size<4){used.add(h);H.push({n:h,at:k})}
+      if(c.length>=3&&(!key||c.length>key.c.length))key={w:tr(ws[k]),c,k};
+    }
+    const out=[],pp=POS[Math.max(0,H.length-1)];
+    for(let j=0;j<H.length;j++){const r=await libImg(H[j].n);if(r)out.push({x:pp[j][0],y:pp[j][1],s:pp[j][2],at:H[j].at,in:IN[(b+j)%6],loop:LP[(b+j)%3],im:r.im,ar:r.ar})}
+    if(num)out.push({text:num.w,x:360,y:out.length?200:480,s:num.w.length>6?90:130,at:num.k,in:'zoom',loop:'pulse',color:'acc'});
+    else if(!out.length&&key)out.push({text:key.w,x:360,y:480,s:key.w.length>8?96:130,at:key.k,in:'pop',loop:'pulse',color:'acc'});
+    beats.push({w0,acc:b,L:out});
+  }
+  return {ok:true,beats};
+}
+async function freeAll(){
+  if(!buf||!sents.length)return;
+  const my=++aiRun;
+  for(let i=0;i<sents.length;i++){const a=await freeScene(i);if(my!==aiRun)return;AIV[i]=a}
+  renderList();frame();
+}
+/* FREE END */
+const trend=()=>$('#sty').value==='trend';
+function capBig(c,C,t,ct,col,P){
+  if(!C)return;
+  let act=0;C.words.forEach((x,k)=>{if(t>=x.s)act=k});
+  const o=C.words[act],txt=o.w.replace(/[।?!.,"'’‘“”:;]+$/,'')||o.w,pop=ease((t-o.s)/.14);
+  c.save();c.font='800 118px '+HF;c.textAlign='center';c.textBaseline='middle';c.lineJoin='round';
+  const m=c.measureText(txt).width,f=Math.min(1,640/m),sc=Math.max(.001,(.7+.3*pop)*f);
+  c.translate(W/2,905);c.rotate((1-pop)*-.06);c.scale(sc,sc);
+  c.lineWidth=22;c.strokeStyle='rgba(8,12,20,.95)';c.strokeText(txt,0,0);
+  c.fillStyle=(C.emph||/[0-9०-९]/.test(txt))?col:'#FFFFFF';c.fillText(txt,0,0);c.restore();
+}
+$('#sty').onchange=frame;
+let mus=false,fxb=false;
+/* ---------- music mode: beat-synced scenes ---------- */
+function beatGrid(){
+  const n=env.length,o=new Float32Array(n);
+  for(let k=3;k<n;k++)o[k]=Math.max(0,(env[k]+env[k-1])/2-(env[k-2]+env[k-3])/2);
+  let bl=50,bs=-1;
+  for(let L=30;L<=80;L++){let s=0;for(let k=L;k<n;k++)s+=o[k]*o[k-L];s=s/(n-L)*Math.exp(-Math.pow(Math.log(L/55),2)/.9);if(s>bs){bs=s;bl=L}}
+  let ph=0,pb=-1;
+  for(let p=0;p<bl;p++){let s=0;for(let k=p;k<n;k+=bl)s+=Math.max(o[k],o[k+1]||0,o[k-1]||0);if(s>pb){pb=s;ph=p}}
+  const t=[];let cur=ph;
+  while(cur<n){t.push(cur/100);const b=cur+bl;let m=-1,bk=b;for(let k=b-3;k<=b+3;k++)if(k>0&&k<n&&o[k]>m){m=o[k];bk=k}cur=m>0?bk:b}
+  return {t,per:bl/100};
+}
+async function doMusic(){
+  if(!buf||!env){setSt('Upload a song or audio file first.');return}
+  const {t,per}=beatGrid(),g=per*4>=1.6?4:8,bpm=60/per,G=[],
+    E=bpm>110?[5,12,6,13,36,11,35,37,17,21,29,24]:[18,20,4,19,33,34,10,23,2,3,31,26];
+  t[0]=0;
+  for(let k=0;k<t.length;k+=g)G.push(t.slice(k,k+g));
+  if(G.length>1&&G[G.length-1].length<g/2){const l=G.pop();G[G.length-1]=G[G.length-1].concat(l)}
+  resetMedia();mus=true;const D=buf.duration,my=++aiRun;
+  autoW=G.map((a,i)=>{const end=G[i+1]?G[i+1][0]:D;return a.map((s,k)=>({w:'♪',s,e:k+1<a.length?a[k+1]:end}))});
+  sents=autoW.map(a=>a.map(x=>x.w).join(' '));tplPick=[];cuts=G.slice(1).map(a=>a[0]);
+  $('#sc').value='';refresh();
+  for(let i=0;i<G.length;i++){
+    const beats=[];
+    for(let k=0;k<G[i].length;k++){
+      const a=E[(i*5+k*3)%E.length],b=E[(i*5+k*3+7)%E.length],ra=await libImg(a),rb=await libImg(b),L=[];
+      if(ra)L.push({x:360,y:470,s:400,at:k,in:k%2?'zoom':'pop',loop:'pulse',im:ra.im,ar:ra.ar});
+      if(rb)L.push({x:k%2?150:570,y:k%2?250:700,s:150,at:k,in:k%2?'slide-right':'slide-left',loop:'float',im:rb.im,ar:rb.ar});
+      beats.push({w0:k,acc:i+k,L});
+    }
+    if(my!==aiRun)return;
+    AIV[i]={ok:true,beats};
+  }
+  $('#ai').checked=true;
+  setSt('Music mode: '+G.length+' scenes at about '+Math.round(bpm)+' BPM, visuals pop on every beat. Drag the markers to adjust cuts.');
+  renderList();frame();
+}
+$('#bm').onclick=doMusic;
+/* ---------- fast MP4 export (faster than real time) ---------- */
+async function exportFast(){
+  if(!buf||!sents.length)return exportVideo();
+  if(!(window.VideoEncoder&&window.AudioEncoder&&window.VideoFrame&&window.AudioData)||media.some(m=>m&&m.k==='vid'))return exportVideo();
+  if(busy||fxb)return;
+  fxb=true;stop();const es=$('#es');$('#ex').disabled=true;
+  try{
+    es.textContent='Preparing fast MP4 export…';
+    const MX=await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.mjs');
+    const sr=buf.sampleRate,ch=Math.min(2,buf.numberOfChannels),fps=30,N=Math.ceil(buf.duration*fps);
+    const vc={codec:'avc1.640028',width:W,height:H,bitrate:7e6,framerate:fps};
+    let ao={codec:'mp4a.40.2',sampleRate:sr,numberOfChannels:ch,bitrate:128000},mc='aac';
+    if(!(await VideoEncoder.isConfigSupported(vc)).supported)throw new Error('video codec unsupported');
+    if(!(await AudioEncoder.isConfigSupported(ao)).supported){ao={codec:'opus',sampleRate:sr,numberOfChannels:ch,bitrate:128000};mc='opus';if(!(await AudioEncoder.isConfigSupported(ao)).supported)throw new Error('audio codec unsupported')}
+    const mux=new MX.Muxer({target:new MX.ArrayBufferTarget(),video:{codec:'avc',width:W,height:H},audio:{codec:mc,numberOfChannels:ch,sampleRate:sr},fastStart:'in-memory'});
+    let err=null;
+    const vE=new VideoEncoder({output:(c,m)=>mux.addVideoChunk(c,m),error:e=>{err=e}}),aE=new AudioEncoder({output:(c,m)=>mux.addAudioChunk(c,m),error:e=>{err=e}});
+    vE.configure(vc);aE.configure(ao);
+    for(let o=0;o<buf.length;o+=sr){
+      const n=Math.min(sr,buf.length-o),d=new Float32Array(n*ch);
+      for(let c=0;c<ch;c++)d.set(buf.getChannelData(c).subarray(o,o+n),c*n);
+      aE.encode(new AudioData({format:'f32-planar',sampleRate:sr,numberOfFrames:n,numberOfChannels:ch,timestamp:Math.round(o/sr*1e6),data:d}));
+    }
+    for(let i=0;i<N;i++){
+      if(err)throw err;
+      drawPrev(i/fps);
+      const f=new VideoFrame(pv,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
+      vE.encode(f,{keyFrame:i%60===0});f.close();
+      if(i%6===0){es.textContent='Rendering MP4 '+Math.round(i/N*100)+'%…';while(vE.encodeQueueSize>6)await new Promise(r=>setTimeout(r,5));await new Promise(r=>setTimeout(r))}
+    }
+    await vE.flush();await aE.flush();if(err)throw err;mux.finalize();
+    const u=URL.createObjectURL(new Blob([mux.target.buffer],{type:'video/mp4'})),a=document.createElement('a');
+    a.href=u;a.download='reel.mp4';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);
+    es.textContent='Done. Saved as reel.mp4.';
+  }catch(e){
+    fxb=false;$('#ex').disabled=false;frame();
+    es.textContent='Fast export failed ('+(e&&e.message?e.message:e)+'). Switching to real-time export.';
+    return exportVideo();
+  }
+  fxb=false;$('#ex').disabled=false;frame();
 }
 $('#ak').value=aiKey();
 $('#ak').onchange=()=>{try{localStorage.setItem('rs_key',$('#ak').value.trim())}catch(e){}};
@@ -1095,7 +1281,7 @@ $('#tr').onclick=transcribe;
 $('#cn').onclick=()=>{runId++;if(tick){clearInterval(tick);tick=null}busy=false;$('#tr').disabled=false;$('#cn').hidden=true;setSt('Cancelled. Press Transcribe audio to try again, or paste your script and press Build reel from script.');frame()};
 $('#fv').onclick=()=>{if(!sents.length){setVs('Add audio and a transcript first.');return}media.forEach((m,i)=>{if(m&&m.auto)clearMedia(i)});credits();renderList();autoBroll()};
 $('#ab').onchange=()=>{if($('#ab').checked)autoBroll();else{abRun++;setVs('Web photos are off.')}};
-$('#ex').onclick=exportVideo;
+$('#ex').onclick=exportFast;
 $('#th').onchange=frame;
 $('#hd').oninput=frame;
 $('#sample').onclick=()=>{$('#sc').value=SAMPLE;if(buf)align();else setSt('Sample script added. Upload a voiceover to time it.')};
