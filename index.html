@@ -149,6 +149,8 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 <span id="tm" class="mute">0.00s</span>
 <span class="mute">Tap a scene to play it. Expand it for duration and change previews; you can also drag waveform cuts.</span>
 </div>
+<nav id="sceneRail" class="scene-rail" aria-label="Jump to scene"></nav>
+<p id="scenePaceHint" class="mute scene-pace-hint" role="status">Add audio to see scene pacing.</p>
 <p id="visualReviewNote" class="mute" hidden>Visual-only review: preview audio and captions are hidden. Video exports and caption files are unchanged. Can you follow the idea from the pictures?</p>
 </section>
 
@@ -192,7 +194,7 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 <button id="capAdvanced" type="button" aria-expanded="false">Advanced caption controls ▾</button>
 <div class="capg">
 <label class="chk"><input type="checkbox" id="c_on" checked> Captions on</label>
-<label>Words per cue<select id="c_wpc" class="big"><option value="1">1 word</option><option value="2">2 words</option><option value="3" selected>3 words (max)</option></select></label>
+<label>Words per cue<select id="c_wpc" class="big"><option value="1">1 word</option><option value="2">2 words</option><option value="3">3 words</option><option value="6" selected>Full phrase (up to 6 words)</option></select></label>
 <label>Emphasis<select id="c_emph" class="big"><option value="0">Off</option><option value="1">Subtle</option><option value="2" selected>Strong</option></select></label>
 <label>Text style<select id="c_sty" class="big"><option value="outline" selected>Outline</option><option value="shadow">Shadow</option><option value="backing">Subtle backing</option></select></label>
 <label>Position: <output id="c_yo">58.5%</output> of frame height<input type="range" id="c_y" min="45" max="82" step="0.5" value="58.5"></label>
@@ -228,6 +230,10 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 <script src="reel-director.js"></script>
 <script src="visual-grammar.js"></script>
 <script src="visual-layout.js"></script>
+<script src="pacing.js"></script>
+<script src="caption-phrase.js"></script>
+<script src="motion-direction.js"></script>
+<script src="editorial-visuals.js"></script>
 <script src="story-director.js"></script>
 <script src="scene-graph.js"></script>
 <script src="story-style.js"></script>
@@ -270,7 +276,7 @@ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim
 const fmt=t=>t.toFixed(2)+'s';
 const setSt=m=>{$('#st').textContent=m};
 const setVs=m=>{$('#vs').textContent=m};
-const split=s=>s.split(/(?<=[।?!.])\s+|\n+/).map(x=>x.trim()).filter(Boolean);
+const split=s=>window.ReelPacing.script(s);
 const len=s=>s.replace(/\s/g,'').length;
 const bounds=i=>[i?cuts[i-1]:0,i<sents.length-1?cuts[i]:buf.duration];
 const idxAt=t=>{for(let i=0;i<sents.length;i++){if(t<bounds(i)[1])return i}return sents.length-1};
@@ -332,18 +338,7 @@ async function pcm16k(){
   s.buffer=buf;s.connect(oc.destination);s.start();
   return (await oc.startRendering()).getChannelData(0);
 }
-function scenesFromWords(ws){
-  const out=[];let cur=[];
-  const flush=()=>{if(cur.length){out.push(cur);cur=[]}};
-  ws.forEach((w,k)=>{
-    cur.push(w);const nx=ws[k+1],gap=nx?nx.s-w.e:9;
-    if(/[।?!.]$/.test(w.w)||gap>.55||cur.length>=10)flush();
-  });
-  flush();
-  const m=[];
-  out.forEach(sc=>{const d=sc[sc.length-1].e-sc[0].s;if(m.length&&d<1.2)m[m.length-1]=m[m.length-1].concat(sc);else m.push(sc)});
-  return m;
-}
+function scenesFromWords(ws){return window.ReelPacing.timed(ws)}
 function spreadSegments(chunks){
   const ws=[];
   chunks.forEach(ch=>{
@@ -498,7 +493,7 @@ function buildBeats(){
 
 /* ---------- word and chunk timing ---------- */
 /* caption settings + per-scene caption edits (CW[i]={w:[{w,s,e,m}],c:null|[cue start word indexes]}) shared by preview, export, SRT/VTT and projects */
-const CAP={on:true,y:.585,size:100,wpc:3,txt:'#FFFFFF',hl:'#FFD60A',hlAuto:true,sty:'outline',emph:2};
+const CAP={on:true,y:.585,size:100,wpc:6,txt:'#FFFFFF',hl:'#FFD60A',hlAuto:true,sty:'outline',emph:2};
 const SAFE={show:false,top:12,bottom:22,right:12};
 let CW={};
 const wordsT=i=>{
@@ -531,10 +526,10 @@ function chunkify(ws,si){
     return out;
   }
   const flush=()=>{if(cur.length){out.push({words:cur,s:cur[0].s,e:cur[cur.length-1].e,idx:st});st+=cur.length;cur=[]}};
-  const mx=Math.max(1,Math.min(3,CAP.wpc|0||3));
+  const mx=Math.max(1,Math.min(6,CAP.wpc|0||6));
   for(const w of ws){
     cur.push(w);const chars=cur.reduce((a,x)=>a+len(x.w),0);
-    if(cur.length>=mx||(mx>1&&chars>=11)||/[,।?!.]$/.test(w.w)||(mx===3&&cur.length===2&&chars>=7))flush();
+    if(cur.length>=mx||(mx<=3&&chars>=mx*7)||chars>=46||/[,।?!.]$/.test(w.w))flush();
   }
   flush();return out;
 }
@@ -566,9 +561,23 @@ function setMedia(i,f){
   else{el=new Image();el.onload=()=>{renderList();frame()};el.src=url;media[i]={k:'img',el,url,file:f}}
   renderList();
 }
+function renderSceneRail(){
+ const rail=$('#sceneRail'),hint=$('#scenePaceHint');if(!rail)return;
+ rail.replaceChildren();if(!buf||!sents.length){hint.textContent='Add audio to see scene pacing.';return}
+ const group=document.createDocumentFragment();sents.forEach((text,i)=>{
+  const [a,b]=bounds(i),button=document.createElement('button');button.type='button';button.className='scene-chip';button.dataset.scene=i;
+  const name=document.createElement('b'),length=document.createElement('small');name.textContent=String(i+1).padStart(2,'0')+' · '+(visualWord(text)||'Scene');length.textContent=a.toFixed(1)+'–'+b.toFixed(1)+'s';
+  button.append(name,length);button.title='Jump to scene '+(i+1)+': '+text;button.setAttribute('aria-label','Jump to scene '+(i+1)+' at '+a.toFixed(1)+' seconds');
+  button.onclick=()=>{if(exporting)return;if(playing)stop();window.OPEN_SCENE=i;renderList();seek(Math.min(b-.01,a+.03))};group.appendChild(button)
+ });rail.appendChild(group);
+ hint.textContent=sents.length+' scenes · visual emphasis about every 2.5s · soft visual transition at 15s, 30s… Captions and voice stay continuous.';
+}
+function updateSceneRail(i){const rail=$('#sceneRail');if(!rail)return;rail.querySelectorAll('.scene-chip').forEach(chip=>{
+ const selected=+chip.dataset.scene===i;chip.classList.toggle('active',selected);if(selected){chip.setAttribute('aria-current','true');if(!playing&&chip.scrollIntoView)chip.scrollIntoView({block:'nearest',inline:'nearest'})}else chip.removeAttribute('aria-current')
+})}
 function renderList(){
   const ol=$('#ls');ol.innerHTML='';lastIdx=-2;
-  if(!buf)return;
+  if(!buf){renderSceneRail();return;}
   sents.forEach((s,i)=>{
     const [a,b]=bounds(i),li=document.createElement('li'),bt=document.createElement('button');
     bt.type='button';bt.className='sc';bt.innerHTML='<b></b><span class="tx" dir="auto"></span><small></small>';
@@ -584,6 +593,7 @@ function renderList(){
     if(media[i]){const rb=document.createElement('button');rb.type='button';rb.textContent='Remove';rb.onclick=()=>{clearMedia(i);renderList();frame()};rw.appendChild(rb)}
     rw.appendChild(fi);li.appendChild(rw);ol.appendChild(li);
   });
+  renderSceneRail();
 }
 function json(){
   if(!buf||!sents.length){$('#js').value='';return}
@@ -1030,7 +1040,7 @@ function panel(c,x,y,w,h,color,alpha=1){
 }
 function pathArrow(c,x1,y1,x2,y2,amount,color){const x=x1+(x2-x1)*smooth(amount),y=y1+(y2-y1)*smooth(amount);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=6;c.lineCap='round';c.beginPath();c.moveTo(x1,y1);c.lineTo(x,y);c.stroke();if(amount>.85){const a=Math.atan2(y2-y1,x2-x1);c.beginPath();c.moveTo(x,y);c.lineTo(x-19*Math.cos(a-.55),y-19*Math.sin(a-.55));c.lineTo(x-19*Math.cos(a+.55),y-19*Math.sin(a+.55));c.closePath();c.fill()}c.restore()}
 function figure(c,x,y,t,col,pose='point',scale=1,mirror=false){c.save();c.translate(x,y);c.scale(mirror?-scale:scale,scale);const bob=UI.sty==='classic'?0:Math.sin(t*($('#motion').value==='calm'?2:6))*($('#motion').value==='calm'?2:6);c.translate(0,bob);c.strokeStyle='#F3F7F7';c.lineWidth=9;c.lineCap='round';c.lineJoin='round';
- const limb=(a,b,d,e)=>{c.beginPath();c.moveTo(a,b);c.lineTo(d,e);c.stroke()};
+ const limb=(a,b,d,e)=>{c.beginPath();c.moveTo(a,b);if(sk())c.quadraticCurveTo((a+d)/2+Math.sin(a*.11+b*.07)*5,(b+e)/2+Math.cos(d*.09+e*.1)*4,d,e);else c.lineTo(d,e);c.stroke()};
  c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.ellipse(0,125,64,10,0,0,7);c.fill();c.fillStyle=col;c.beginPath();c.arc(0,-89,32,0,7);c.fill();c.stroke();c.strokeStyle='#162233';c.lineWidth=3;limb(-10,-92,-5,-90);limb(7,-92,12,-90);c.beginPath();c.arc(1,-80,10,.15,Math.PI-.15);c.stroke();c.strokeStyle='#F3F7F7';c.lineWidth=9;limb(0,-56,0,49);limb(0,45,-43,112);limb(0,45,45,112);
  if(pose==='hold'){limb(0,-24,-43,4);limb(-43,4,-5,13);limb(0,-24,43,4);limb(43,4,5,13)}else if(pose==='block'){limb(0,-22,-48,-45);limb(-48,-45,-73,-85);limb(0,-22,48,-45);limb(48,-45,73,-85)}else{limb(0,-25,40,-2);limb(40,-2,83,-34);limb(0,-25,-35,15);limb(-35,15,-55,35)}c.restore()}
 /* Hand-drawn explanatory objects shared by non-Structural reel styles. */
@@ -1075,7 +1085,7 @@ function drawStickmanAction(c,i,t,plan,col,show){
   else if(item.word)visualMotif(c,item.word,0,0,col,Math.max(.38,lt-delay));
   c.restore()
  };
- const source=gram?gram.left:null,match=visualWord(plan.subject||sents[i]);
+ const source=gram?gram.left:null,match=visualWord(sents[i])||visualWord(plan.subject||sents[i]);
  const single=match?{icon:libHit(match),word:match}:null;
  if(show('diagram')){
   if(gram){prop(source,pos.a,0);
@@ -1093,7 +1103,7 @@ function drawStickmanAction(c,i,t,plan,col,show){
    c.save();c.strokeStyle=col;c.lineWidth=4;c.globalAlpha=.35+.45*p;c.beginPath();
    c.arc(pos.a[0],pos.a[1],75,-Math.PI/2,-Math.PI/2+Math.PI*1.8*p);c.stroke();c.restore()}
  }
- if(show('character'))figure(c,fx,fy,lt,col,gram?.kind==='cause'?'hold':plan.purpose==='problem'?'block':plan.purpose==='example'?'hold':'point',gram?.67:v===2?.8:.95,v===1);
+ if(show('character')){const base=gram?.kind==='cause'?'hold':plan.purpose==='problem'?'block':plan.purpose==='example'?'hold':'point',pose=(t-a>=2.45&&base==='point')?'hold':base;figure(c,fx,fy,lt,col,pose,gram?.67:v===2?.8:.95,v===1)};
  if(show('labels')&&(!CAP.on||visualOnly())){
   if(gram){label(c,gram.left.word,pos.a[0],pos.a[1]+111,210,28,'#fff');
    if(t>=(wordsT(i)[gram.at]?.s??a+(b-a)*.5))label(c,gram.right.word,pos.b[0],pos.b[1]+111,210,28,'#fff')}
@@ -1107,9 +1117,10 @@ function drawDirected(c,i,t,P,col,onMedia=false){
  const v=sceneCfg(i),show=k=>sceneLayer(i,k);const arr=labels.length?labels:[plan.keyIdea];
  const beat=Math.max(.7,Math.min(2.2,dur/(treatment==='steps'?Math.min(3,arr.length):3))),r=n=>window.VisualLayout.progress(lt-n*beat,dur);
  const character=()=>{if(show('character'))figure(c,treatment==='comparison'?350:175,454,lt,col,treatment==='obstacle'?'block':treatment==='demo'?'hold':'point',treatment==='comparison'?.48:.88)};
- const word=(str,x,y,w=450,sz=38)=>{if(show('labels')){if(CAP.on&&!visualOnly()&&v.treatment==='auto'&&show('diagram'))str='';else if(CAP.on&&show('diagram')&&treatment!=='typography')str=visualWord(str);if(!str)return;label(c,str,x,y,w,sz,'#FFFFFF');if(sk()&&str){c.save();c.strokeStyle=col;c.lineWidth=3;c.beginPath();for(let dx=-Math.min(w*.27,80);dx<=Math.min(w*.27,80);dx+=8)c.lineTo(x+dx,y+sz*.92+Math.sin(dx*.11)*2);c.stroke();c.restore()}}};
+ const word=(str,x,y,w=450,sz=38)=>{if(show('labels')){if(CAP.on&&!visualOnly()&&show('diagram')&&treatment!=='typography')str=visualWord(str);if(!str)return;label(c,str,x,y,w,sz,'#FFFFFF');if(sk()&&str){c.save();c.strokeStyle=col;c.lineWidth=3;c.beginPath();for(let dx=-Math.min(w*.27,80);dx<=Math.min(w*.27,80);dx+=8)c.lineTo(x+dx,y+sz*.92+Math.sin(dx*.11)*2);c.stroke();c.restore()}}};
  c.save();c.beginPath();c.rect(20,115,680,550);c.clip();
  if(onMedia){if(show('diagram')){panel(c,50,445,620,142,col,.85);pathArrow(c,105,510,150+420*r(1),510,r(1),col)}word(arr[0],360,500,530,43);c.restore();return}
+ if(!mus&&v.treatment==='auto'&&show('diagram')&&(UI.sty==='classic'||UI.sty==='trend')&&plan.grammar?.kind!=='contrast'&&((sents[i].match(/[₹$]?\d+(?:[.,]\d+)*/g)||[]).length<2)&&window.EditorialVisuals.render(c,{style:UI.sty,i,t,a,b,words:wordsT(i),lookup:libHit,getIcon:grammarIcon,accent:col,calm:$('#motion').value==='calm'})){c.restore();return}
  if(!onMedia&&!mus&&v.treatment==='auto'&&(sk()||$('#direction').value==='stickman')){drawStickmanAction(c,i,t,plan,col,show);c.restore();return}
  if(!mus&&show('diagram')&&plan.grammar?.supported&&(v.treatment==='explain'||v.treatment==='auto'&&$('#direction').value!=='stickman')){
   const when=wordsT(i)[plan.grammar.at]?.s??a+dur*.5;
@@ -1175,7 +1186,7 @@ function drawWide(t,cap){
  c.strokeStyle=minimal()?'rgba(247,244,255,.35)':col;c.lineWidth=minimal()?2:3;c.beginPath();c.moveTo(751,45);c.lineTo(751,675);c.stroke();
  if(buf&&sents.length){
   const i=idxAt(t),plan=scenePlan(i),[a,b]=bounds(i),g=plan.grammar;
-  const raw=g?.supported?(t<(wordsT(i)[g.at]?.s??a+(b-a)*.5)?g.left.icon:g.right.icon):libHit(visualWord(plan.subject||sents[i]));
+  const raw=g?.supported?(t<(wordsT(i)[g.at]?.s??a+(b-a)*.5)?g.left.icon:g.right.icon):libHit(visualWord((tl[i]||[]).flatMap(q=>q.words).filter(w=>w.s<=t&&w.s>=t-3.1).map(w=>w.w).join(' '))||visualWord(plan.subject||sents[i]));
   const iconId=raw>=0?raw:-1,asset=iconId>=0?grammarIcon(iconId):null;
   const phase=window.VisualLayout.progress(t-a,b-a),x=1000+(i%2?26:-26),y=153;
   /* One enlarged, spoken subject replaces the duplicated script title and labels. */
@@ -1224,8 +1235,11 @@ function drawPrev(t){
   let bi=0;bs.forEach((x,k)=>{if(vt>=x.s)bi=k});const B=bs[bi];
   let ci=0;ch.forEach((x,k)=>{if(vt>=x.s)ci=k});const C=ch[ci],ct=C?vt-C.s:9;
   const col=P.acc[(B?B.g:i)%P.acc.length],blt=B?Math.max(0,vt-B.s):lt,bdur=B?Math.max(.4,B.e-B.s):1,bp=Math.min(1,blt/bdur),e=envAt(t);
+  const motion=window.ReelMotion.state({time:t,start:a,end:b,words:wordsT(i),lookup:libHit,style:activeStyle,calm:$('#motion').value==='calm'});
   const dir=B&&B.flip?-1:1,legacy=mus||!!(window.OVR||[])[i],punch=story()?1:minimal()?1+.008*p:legacy?1.03+(trend()?.15:.07)*Math.exp(-blt*9)+.05*bp:1.01+.015*p,sh=legacy&&!minimal()&&!story()?Math.exp(-lt*12)*8:0;
+  c.fillStyle=P.bg[0];c.fillRect(0,0,W,H);
   c.save();
+  if(!mus)window.ReelMotion.reframe(c,motion);
   c.translate(W/2+Math.sin(lt*90)*sh+(minimal()||story()?0:dir*(bp-.5)*26),H/2+Math.cos(lt*70)*sh*.6);c.scale(punch,punch);c.translate(-W/2,-H/2);
   if(story())StoryStyle.render(c,{i,t:vt,lt,M,col,P,pin:(window.OVR||[])[i],treatment:sceneCfg(i).treatment,
     layers:sceneCfg(i).layers,propPlan:!mus&&!((window.OVR||[])[i])&&sceneLayer(i,'diagram')&&useProp(i)?propFor(i):null,propWords:wordsT(i),propStart:a,propEnd:b,eduPlan:!mus&&!((window.OVR||[])[i])&&sceneLayer(i,'diagram')&&useEdu(i)?eduFor(i):null,eduWords:wordsT(i),eduStart:a,eduEnd:b,selfPlan:!mus&&!((window.OVR||[])[i])&&sceneLayer(i,'diagram')&&useSelf(i)&&!useEdu(i)&&!useProp(i)?selfFor(i):null,selfWords:wordsT(i),selfStart:a,selfEnd:b,graph:!mus&&!((window.OVR||[])[i])&&sceneLayer(i,'diagram')&&useGraph(i)?graphFor(i):null,graphWords:wordsT(i),graphStart:a,graphEnd:b,direction:$('#direction').value,preferMedia:['balanced','footage'].includes($('#direction').value),music:mus,grammar:grammarFor(i),captionsOn:CAP.on&&!visualOnly(),variant:i%3,getIcon:grammarIcon,revealAt:wordsT(i)[grammarFor(i).at]?.s??a+(b-a)*.5,calm:$('#motion').value==='calm'});
@@ -1234,7 +1248,7 @@ function drawPrev(t){
    const explicit=manual==='auto'?null:{comparison:'compare',steps:'list',flow:'flow',focus:'metaphor',demo:'miniscene',payoff:'statement',typography:'statement',hook:'statement',obstacle:'metaphor',explain:'compare'}[manual]||null;
    const override=explicit==='compare'&&!plan.data?.sides&&!scenePlan(i).grammar?.supported?'statement':explicit;
    ExplainerStyle.frame(c,{i,total:sents.length,t:vt,lt,start:a,end:b,text:sents[i],plan,override:!mus&&!((window.OVR||[])[i])&&!ready(M)&&sceneLayer(i,'diagram')&&useEdu(i)&&manual==='auto'?eduFor(i).id:!mus&&!((window.OVR||[])[i])&&!ready(M)&&sceneLayer(i,'diagram')&&useProp(i)&&manual==='auto'?'prop-'+propFor(i).id:!mus&&!((window.OVR||[])[i])&&!ready(M)&&sceneLayer(i,'diagram')&&useSelf(i)&&manual==='auto'?selfFor(i).id:!mus&&!((window.OVR||[])[i])&&!ready(M)&&sceneLayer(i,'diagram')&&useGraph(i)&&manual==='auto'?'graph':override,selfPlan:selfFor(i),eduPlan:eduFor(i),propPlan:propFor(i),graph:graphFor(i),graphWords:wordsT(i),accent:$('#expAccent').value,theme:$('#expTheme').value,handle:UI.hd,motion:$('#motion').value,wide:wide(),amplitude:e,music:mus,
-     getIcon:grammarIcon,lookup:libHit,pin:(window.OVR||[])[i],paintPin:cc=>stageFit(cc,(window.OVR||[])[i],Math.max(.03,lt),vt,col,P,e,false,sents[i]),
+     getIcon:grammarIcon,lookup:libHit,captionsOn:CAP.on&&!visualOnly(),pin:(window.OVR||[])[i],paintPin:cc=>stageFit(cc,(window.OVR||[])[i],Math.max(.03,lt),vt,col,P,e,false,sents[i]),
      media:ready(M)&&sceneLayer(i,'media')&&(manual==='media'||manual==='auto'&&['balanced','footage'].includes($('#direction').value))?M:null});
   }
   else if(minimal())StructuralReel.renderScene(c,{time:vt,start:a,end:b,text:sents[i],words:ch.flatMap(x=>x.words),media:M,
@@ -1245,6 +1259,11 @@ function drawPrev(t){
   else if((window.OVR||[])[i]){if(sk())sketchScene(c,B,blt,vt,col,P,e);else{stageBg(c,P,t,col);if(B)stageFit(c,B.scene,blt,vt,col,P,e,B.flip,B.txt)}}
   else drawDirected(c,i,vt,P,col);
   c.restore();
+  if(!mus){
+   const cfg=sceneCfg(i),sourceFree=!ready(M)&&!(window.OVR||[])[i]&&cfg.treatment==='auto'&&sceneLayer(i,'diagram')&&!useGraph(i)&&!useEdu(i)&&!useSelf(i)&&!useProp(i);
+   if(sourceFree&&!(minimal()&&new Set(wordsT(i).filter(w=>w.s<=t&&w.s>=a).map(w=>libHit(w.w)).filter(id=>id>=0)).size>=2))window.ReelMotion.callout(c,motion,grammarIcon);
+   window.ReelMotion.transition(c,motion);
+  }
   if(mus&&trend()&&bi>0){c.fillStyle='rgba(255,255,255,'+(.4*Math.exp(-blt*16)).toFixed(3)+')';c.fillRect(0,0,W,H)}
   if(!minimal()&&!story()&&!explainer()){const sg=c.createLinearGradient(0,600,0,H);sg.addColorStop(0,'rgba(0,0,0,0)');sg.addColorStop(1,'rgba(0,0,0,.5)');c.fillStyle=sg;c.fillRect(0,600,W,H-600)}
   if(!wide()&&!visualOnly()&&!mus&&C&&vt>=C.words[0]?.s-.01){if(minimal())StructuralReel.caption(c,{cue:C,time:vt,config:CAP,hits:CAPHIT,safe:SAFE});else if(explainer())ExplainerStyle.caption(c,{cue:C,time:vt,config:CAP,hits:CAPHIT,lookup:libHit,accent:$('#expAccent').value,theme:$('#expTheme').value});else drawCap(c,C,vt,ct,col,P)}else CAPHIT=[]
@@ -1274,7 +1293,7 @@ function frame(){
   if(!buf||!sents.length){$('#sceneNavLabel').textContent='Scene —';$('#scenePrev').disabled=true;$('#sceneNext').disabled=true}
   if(buf&&sents.length){
     const i=idxAt(t),label='Scene '+(i+1)+' / '+sents.length;if($('#sceneNavLabel').textContent!==label)$('#sceneNavLabel').textContent=label;$('#scenePrev').disabled=i===0;$('#sceneNext').disabled=i===sents.length-1;
-    if(i!==lastIdx){const L=$('#ls').children;if(L[lastIdx]&&L[lastIdx].firstChild)L[lastIdx].firstChild.classList.remove('on');if(L[i]&&L[i].firstChild)L[i].firstChild.classList.add('on');const ol=$('#ls');if(!playing||ol.matches(':hover')===false)ol.scrollTop=Math.max(0,L[i].offsetTop-ol.clientHeight/3);lastIdx=i}
+    if(i!==lastIdx){const L=$('#ls').children;if(L[lastIdx]&&L[lastIdx].firstChild)L[lastIdx].firstChild.classList.remove('on');if(L[i]&&L[i].firstChild)L[i].firstChild.classList.add('on');const ol=$('#ls');if(!playing||ol.matches(':hover')===false)ol.scrollTop=Math.max(0,L[i].offsetTop-ol.clientHeight/3);lastIdx=i;updateSceneRail(i)}
   }
 }
 /* Scene length edits move the existing shared cut, never stretch voice or invent audio.
@@ -1617,7 +1636,7 @@ function drawCap(c,C,t,ct,col,P){
   CAPHIT=[];
   if(!CAP.on||!C||!C.words.length)return;
   const S=sk(),ws=C.words,n=ws.length,E=CAP.emph,hl=CAP.hlAuto&&story()?'#DBA944':CAP.hlAuto?col:CAP.hl,
-    px=(CAP.wpc===1?122:CAP.wpc===2?96:80)*CAP.size/100*(S?1.04:UI.sty==='trend'?1.08:UI.sty==='classic'?.94:1);
+    px=(CAP.wpc===1?122:CAP.wpc===2?96:CAP.wpc>=5?57:80)*CAP.size/100*(S?1.04:UI.sty==='trend'?1.08:UI.sty==='classic'?.94:1);
   let act=0;ws.forEach((x,k)=>{if(t>=x.s)act=k});
   const L=capLayout(c,ws,px,capMaxW()),lh=px*1.2,blockH=L.lines.length*lh,cy=CAP.y*H;
   const appear=E?(.9+.1*ease(ct/.12)):1,wob=S&&E?Math.sin(Math.floor(t*8)*2.1)*1.5:0;
@@ -1993,12 +2012,12 @@ window.applyCap=function(c,s){
     if(typeof c.on==='boolean')CAP.on=c.on;
     if(typeof c.y==='number')CAP.y=clamp(c.y,.45,.82);
     if(typeof c.size==='number')CAP.size=clamp(c.size,40,140);
-    if([1,2,3].includes(c.wpc))CAP.wpc=c.wpc;
+    if([1,2,3,6].includes(c.wpc))CAP.wpc=c.wpc;
     if(HEX.test(c.txt))CAP.txt=c.txt;if(HEX.test(c.hl))CAP.hl=c.hl;
     if(typeof c.hlAuto==='boolean')CAP.hlAuto=c.hlAuto;
     if(['outline','shadow','backing'].includes(c.sty))CAP.sty=c.sty;
     if([0,1,2].includes(c.emph))CAP.emph=c.emph;
-  }else Object.assign(CAP,{on:true,y:.585,size:100,wpc:3,txt:'#FFFFFF',hl:'#FFD60A',hlAuto:true,sty:'outline',emph:2});
+  }else Object.assign(CAP,{on:true,y:.585,size:100,wpc:6,txt:'#FFFFFF',hl:'#FFD60A',hlAuto:true,sty:'outline',emph:2});
   if(s&&typeof s==='object'){
     if(typeof s.show==='boolean')SAFE.show=s.show;
     ['top','bottom','right'].forEach(k=>{if(typeof s[k]==='number')SAFE[k]=clamp(s[k],0,k==='right'?25:k==='top'?30:35)});

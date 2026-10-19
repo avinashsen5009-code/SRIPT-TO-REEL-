@@ -65,12 +65,14 @@ function media(c,m,progress){const el=m.el,w=el.videoWidth||el.naturalWidth,h=el
  const x=64,y=145,W=592,H=446,scale=Math.max(W/w,H/h);c.save();c.beginPath();c.rect(x,y,W,H);c.clip();c.filter='grayscale(1) contrast(1.15)';c.drawImage(el,x+(W-w*scale)/2,y+(H-h*scale)/2,w*scale,h*scale);c.filter='none';c.strokeStyle=PAPER;c.lineWidth=1;c.strokeRect(x+.5,y+.5,W-1,H-1);c.restore();return true}
 /* Hold one explanatory hero per scene. Only the small progress trace follows each word. */
 function heroFor(data){
- const asset=data.assets||{},ws=data.words||[],candidate=[];
+ const asset=data.assets||{},all=(data.words||[]).filter(w=>w.s<=data.time+.08),long=(data.end-data.start)>5.2;
+ const beat=Math.min(3,Math.max(0,Math.floor((data.time-data.start)/3.1))),section=long?all.filter(w=>w.s>=data.start+beat*3.1&&w.s<data.start+(beat+1)*3.1):all;
+ const ws=section.length?section:all,candidate=[];
  for(const w of ws){const r=resolve(w.w,data.text,asset);if(common.has(clean(w.w)))continue;
   const weight=r.tier==='library'?4:r.tier==='procedural'?2:1;
   candidate.push({r,weight,at:w.s})}
  candidate.sort((a,b)=>b.weight-a.weight||a.at-b.at);
- return candidate[0]?.r||resolve(data.text?.split(/\s+/)[0]||'•',data.text,asset);
+ return candidate[0]?.r||{tier:'type',word:all.find(w=>!common.has(clean(w.w)))?.w||'•'};
 }
 function narrative(c,plan,phase){
  const p=ease(phase),kind=plan?.purpose||'mechanism';c.save();c.strokeStyle='rgba(247,244,255,.55)';c.lineWidth=1.5;
@@ -122,26 +124,44 @@ function paintWide(c,data,x,y){const sourced=sourcePlan(data);if(!sourced)return
  else if(values.length===1&&/[0-9०-९]/u.test(String(values[0]))){const q=sourceAt(data,idx[0]??0);if(q>0)sourceText(c,values[0],x,y+20,280,74)}
  else{const labels=(p.labels||p.nodes?.map(n=>n.label)||[]).slice(0,2);labels.forEach((v,j)=>{const q=sourceAt(data,idx[j]??j);if(!q)return;sourceBox(c,853+j*153,128,138,115,q);sourceText(c,v,922+j*153,190,125,25)})}
  c.restore();return true}
+/* Neutral two-subject composition. Both objects must be spoken, both must be
+   recognizable in the bundled library; no unspoken relationship is asserted. */
+const actionWords=new Set('speak speaks speaking said says talk talks talking read reads reading write writes writing open opens opening check checks checking rise rises rising review reviews reviewing count counts counting change changes changing ring rings ringing'.split(' '));
+function spokenPair(c,data){if(data.treatment!=='auto'||data.pin||data.layers?.diagram===false)return false;
+ const seen=new Set(),pair=[];for(const w of data.words||[]){if(w.s>data.time+.02)break;
+  const r=resolve(w.w,data.text,data.assets);if(actionWords.has(clean(w.w)))continue;if(r.tier==='library'&&r.source==='svg'&&!seen.has(r.index)){
+   seen.add(r.index);pair.push({word:clean(w.w),at:w.s,index:r.index});if(pair.length===2)break}}
+ if(pair.length<2)return false;
+ const items=pair.map(v=>({...v,icon:libraryIcon(v.index,data.assets)}));if(items.some(v=>!v.icon?.ok))return false;
+ c.save();c.beginPath();c.rect(54,132,612,479);c.clip();items.forEach((item,j)=>{
+  const q=ease((data.time-item.at)/(data.motion==='calm'?.7:.34)),x=72+j*294,y=180;
+  c.save();c.globalAlpha=q;c.strokeStyle=j?'rgba(247,244,255,.76)':'rgba(247,244,255,.48)';c.lineWidth=1.5;
+  c.strokeRect(x,y,276,340);c.fillStyle='rgba(247,244,255,.018)';c.fillRect(x+2,y+2,272,336);
+  c.save();c.filter='grayscale(1) brightness(1.35) contrast(1.4)';c.drawImage(item.icon.image,x+49,y+55+(1-q)*18,178,178);c.restore();
+  c.fillStyle=PAPER;c.fillRect(x+38,y+260,200,1);title(c,item.word,x+138,y+295,234,38);
+  c.restore()});c.restore();return true
+}
 function renderScene(c,data){background(c);const words=data.words||[],t=data.time;
  let active=words.length?0:-1;for(let k=0;k<words.length;k++)if(t>=words[k].s)active=k;
  const w=active>=0?words[active]:null,markerText=w?.w||data.text||'•',start=w?.s??data.start;
- const sceneProgress=root.VisualLayout.progress(t-data.start,data.end-data.start),pulse=clamp((t-start)/.3),asset=data.assets||{},hero=data.pin&&asset.scenes?.[data.pin]?{tier:'library',source:'scene',id:data.pin,word:markerText}:heroFor(data),layered=data.layers||{};
+ const sceneProgress=root.VisualLayout.progress(t-data.start,data.end-data.start),heroProgress=(data.end-data.start)>5.2?root.VisualLayout.progress((t-data.start)%3.1,3.1):sceneProgress,pulse=clamp((t-start)/.3),asset=data.assets||{},hero=data.pin&&asset.scenes?.[data.pin]?{tier:'library',source:'scene',id:data.pin,word:markerText}:heroFor(data),layered=data.layers||{};
  let libraryPainted=false,drawnMedia=false;
  const useMedia=data.media&&layered.media!==false&&(data.treatment==='media'||data.treatment==='auto'&&['balanced','footage'].includes(data.direction));
  const grammar=data.plan?.grammar;
  const sourced=!useMedia&&layered.diagram!==false?sourcePlan(data):null;
- if(sourced&&sourceVisual(c,data,sourced)){rhythm(c,words,active,t);frame(c);return {tier:'source-component',hero:sourced.plan.id||sourced.plan.kind,word:markerText,index:active}}
+ if(sourced&&!(sourced.family==='prop'&&sourceAt(data,sourced.plan.at)<=0)&&sourceVisual(c,data,sourced)){rhythm(c,words,active,t);frame(c);return {tier:'source-component',hero:sourced.plan.id||sourced.plan.kind,word:markerText,index:active}}
  if(!data.pin&&!useMedia&&layered.diagram!==false&&grammar?.supported&&
     (data.treatment==='explain'||data.treatment==='auto'&&data.direction!=='stickman')){
   root.VisualGrammar.render(c,grammar,{style:'structural',time:t,revealAt:data.revealAt,calm:data.motion==='calm',captionsOn:data.captionsOn,variant:data.variant||0,getIcon:data.getIcon});
   rhythm(c,words,active,t);frame(c);return{tier:'grounded-diagram',word:markerText,hero:grammar.kind,index:active};
  }
+ if(!useMedia&&spokenPair(c,data)){rhythm(c,words,active,t);frame(c);return{tier:'spoken-pair',word:markerText,index:active}}
  c.save();c.beginPath();c.rect(46,110,628,535);c.clip();
  if(useMedia)drawnMedia=media(c,data.media,sceneProgress);
  if(!drawnMedia){if(layered.diagram!==false&&data.treatment!=='typography'&&!(data.treatment==='auto'&&data.plan?.composition==='typography'))narrative(c,data.plan,sceneProgress);
-  if(data.treatment==='typography'||data.treatment==='auto'&&data.plan?.composition==='typography'){if(!data.captionsOn)typography(c,markerText,sceneProgress,0)}
-  else if(hero.tier==='library'&&layered.diagram!==false){libraryPainted=sceneAsset(c,hero,{...data,time:data.start+Math.max(.02,t-data.start)},sceneProgress);if(!libraryPainted)vector(c,{shape:'focus',word:hero.word},sceneProgress,0,!data.captionsOn)}
-  else if(hero.tier==='procedural'&&layered.diagram!==false)vector(c,hero,sceneProgress,0,!data.captionsOn);
+  if(data.treatment==='typography'||data.treatment==='auto'&&data.plan?.composition==='typography'){if(!data.captionsOn)typography(c,markerText,sceneProgress,0);else if(layered.diagram!==false&&hero.tier==='library')libraryPainted=sceneAsset(c,hero,data,heroProgress);else if(layered.diagram!==false&&hero.tier==='procedural')vector(c,hero,heroProgress,0,false);else if(layered.labels!==false&&hero.word!=='•')title(c,clean(hero.word),360,370,430,56)}
+  else if(hero.tier==='library'&&layered.diagram!==false){libraryPainted=sceneAsset(c,hero,{...data,time:data.start+Math.max(.02,t-data.start)},heroProgress);if(!libraryPainted)vector(c,{shape:'focus',word:hero.word},heroProgress,0,!data.captionsOn)}
+  else if(hero.tier==='procedural'&&layered.diagram!==false)vector(c,hero,heroProgress,0,!data.captionsOn);
   else if(!data.captionsOn)typography(c,hero.word,sceneProgress,0)
  }
  c.restore();
@@ -149,14 +169,8 @@ function renderScene(c,data){background(c);const words=data.words||[],t=data.tim
   c.save();c.fillStyle='rgba(17,17,17,.88)';c.fillRect(90,547,540,58);title(c,hero.word,360,575,520,35);c.restore()}
  rhythm(c,words,active,t);frame(c);return {tier:hero.tier,word:markerText,hero:hero.word,index:active};
 }
-function caption(c,{cue,time,config,hits,safe}){hits.length=0;if(!config.on||!cue?.words?.length||time<cue.words[0].s-.01)return;
- const ws=cue.words,active=Math.max(0,ws.reduce((idx,w,k)=>time>=w.s?k:idx,0)),start=Math.max(0,active-2),shown=ws.slice(start,active+1),y=config.y*1280;
- let size=(shown.length===1?90:shown.length===2?72:64)*config.size/100,maxW=Math.min(630,720*(1-2*(safe?.right||12)/100));
- c.save();c.font='600 '+size+'px '+FONT;const gap=15;let widths=shown.map(w=>c.measureText(w.w).width),total=widths.reduce((a,b)=>a+b,0)+gap*(shown.length-1);if(total>maxW){size*=maxW/total;c.font='600 '+size+'px '+FONT;widths=shown.map(w=>c.measureText(w.w).width);total=widths.reduce((a,b)=>a+b,0)+gap*(shown.length-1)}
- c.textAlign='center';c.textBaseline='middle';c.fillStyle='rgba(17,17,17,.86)';c.fillRect(360-total/2-18,y-size*.83,total+36,size*1.66);
- let x=360-total/2;shown.forEach((word,k)=>{const original=start+k,phase=clamp((time-word.s)/.24),q=ease(phase),width=widths[k],cx=x+width/2;
-  c.save();c.beginPath();c.rect(x-2,y-size,x+width+2-(x-2),size*2);c.clip();c.globalAlpha=Math.max(.38,q);c.translate(cx,y+(1-q)*size*.36);c.fillStyle=original%2===0?WHITE:PAPER;c.fillText(word.w,0,0);if(original===active){c.fillRect(-width/2,size*.54,width,1)}c.restore();
-  hits.push({si:cue.si,ci:cue.ci,k:cue.idx+original,x0:x-2,x1:x+width+2,y0:y-size*.9,y1:y+size*.9});x+=width+gap
- });c.restore()}
+function caption(c,{cue,time,config,hits,safe}){
+ root.CaptionPhrase.draw(c,{cue,time,config,hits,style:'structural',accent:'#D7D2E0'});
+}
 root.StructuralReel={resolve,renderScene,caption,background,frame,grain,ease,sourcePlan,sourceAt,paintWide};
 })(window);

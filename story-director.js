@@ -10,7 +10,7 @@ const ROLE={hook:'Hook',takeaway:'Takeaway',problem:'Problem',example:'Example',
 const RX={
  cta:/\b(?:follow|subscribe|comment|share|save this|join us|let me know)\b|फॉलो|सब्सक्राइब|कमेंट|शेयर|साझा करें/iu,
  chapter:/\b(?:number|no\.?|step|tip|tool)\s*(?:[1-9]|one|two|three|four|five|first|second|third)\b|\b(?:first|second|third)\b|^(?:पहला|दूसरा|तीसरा)\b|नंबर\s*[१-९]/iu,
- contrast:/\b(?:but|versus|vs\.?|whereas|without|with|rather than|instead of|before.+after)\b|लेकिन|बनाम|इसके बजाय|पहले.+अब/iu,
+ contrast:/\b(?:but|versus|vs\.?|whereas|rather than|instead of|before.+after)\b|लेकिन|बनाम|इसके बजाय|पहले.+अब/iu,
  flow:/\b(?:then|next|after that|process|steps?|first.+then|how to)\b|फिर|उसके बाद|कदम|प्रक्रिया|कैसे/iu,
  tech:/\b(?:app|phone|call|chat|notification|message|mobile|computer|website|browser|code|tabs?|emails?|docs?)\b|फोन|कॉल|चैट|ऐप|लैपटॉप|मेल|संदेश/iu,
  people:/\b(?:person|people|family|friend|child|mother|father|teacher|doctor|shop|clinic|village|office|customer|boss)\b|लोग|बच्चे|मां|पापा|डॉक्टर|दुकान|गाँव|परिवार|दोस्त/iu,

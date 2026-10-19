@@ -281,8 +281,8 @@ function render(c,opts){
  }
  if(!music&&!pin&&!useMedia&&L.graphic&&opts.eduPlan&&treatment==='auto'){window.EducationalComponents.render(c,opts.eduPlan,{skin:'story',t,start:opts.eduStart,end:opts.eduEnd,words:opts.eduWords,calm});return}
  if(!music&&!pin&&!useMedia&&L.graphic&&opts.propPlan&&treatment==='auto'){window.MetaphorProps.render(c,opts.propPlan,{skin:'story',t,start:opts.propStart,end:opts.propEnd,words:opts.propWords,calm});return}
- if(!music&&!pin&&!useMedia&&L.graphic&&opts.selfPlan&&treatment==='auto'){window.SelfImprovement.render(c,opts.selfPlan,{skin:'story',t,start:opts.selfStart,end:opts.selfEnd,words:opts.selfWords,calm});return}
- if(!music&&!pin&&!useMedia&&L.graphic&&opts.graph&&treatment==='auto'){window.SceneGraph.render(c,opts.graph,{skin:'story',t,start:opts.graphStart,end:opts.graphEnd,words:opts.graphWords,calm});return}
+ if(!music&&!pin&&!useMedia&&L.graphic&&opts.selfPlan&&treatment==='auto'){window.SelfImprovement.render(c,opts.selfPlan,{skin:'story',t,start:opts.selfStart,end:opts.selfEnd,words:opts.selfWords,calm,captionsOn,getIcon,lookup:libHit});return}
+ if(!music&&!pin&&!useMedia&&L.graphic&&opts.graph&&treatment==='auto'){window.SceneGraph.render(c,opts.graph,{skin:'story',t,start:opts.graphStart,end:opts.graphEnd,words:opts.graphWords,calm,captionsOn,getIcon,lookup:libHit});return}
  if(!music&&!pin&&!useMedia&&L.graphic&&grammar?.supported&&(treatment==='explain'||treatment==='auto'&&direction!=='stickman')){
   window.VisualGrammar.render(c,grammar,{style:'story',time:t,revealAt,calm,variant,captionsOn,getIcon});return;
  }
