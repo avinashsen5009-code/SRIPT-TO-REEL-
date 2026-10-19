@@ -39,10 +39,13 @@
   c.save();c.fillStyle=bg;c.fillRect(0,0,720,1280);
   if(paper){c.fillStyle='rgba(27,43,45,.08)';for(let y=100;y<680;y+=42)c.fillRect(45,y,630,1)}
   if(struct){c.strokeStyle='rgba(247,244,255,.05)';c.lineWidth=1;c.beginPath();for(let x=0;x<=720;x+=40){c.moveTo(x,0);c.lineTo(x,690)}for(let y=0;y<690;y+=40){c.moveTo(0,y);c.lineTo(720,y)}c.stroke()}
-  const left={x:48,y:166,w:282,h:456},right={x:390,y:166,w:282,h:456};
-  const reveal=smooth((opt.time-opt.revealAt)/Math.max(.25,opt.calm?.68:.38));
+  const vertical=paper||trend,variant=opt.variant||0;
+  const left=vertical?{x:62,y:135+variant*7,w:596,h:220}:{x:48,y:165+variant*12,w:282,h:444-variant*10};
+  const right=vertical?{x:62,y:424-variant*8,w:596,h:220}:{x:390,y:166+((variant+1)%3)*12,w:282,h:444-variant*10};
+  const reveal=smooth((opt.time-opt.revealAt)/(opt.calm?1.25:.28));
   function card(pos,item,color,alpha){
-   c.save();c.globalAlpha=alpha;
+   c.save();c.globalAlpha=alpha;if(item===g.right)c.translate(0,(1-reveal)*(opt.calm?12:48));
+   if(paper){c.translate(pos.x+pos.w/2,pos.y+pos.h/2);c.rotate((item===g.left?-1:1)*(variant+1)*.006);c.translate(-pos.x-pos.w/2,-pos.y-pos.h/2)}
    c.fillStyle=paper?'#FBF8F0':struct?'#111111':trend?'#161826':sketch?'#182331':'rgba(11,25,39,.9)';
    c.strokeStyle=color;c.lineWidth=sketch?4:struct?1.5:3;
    c.beginPath();c.rect(pos.x,pos.y,pos.w,pos.h);c.fill();c.stroke();
@@ -50,21 +53,21 @@
    if(trend){c.fillStyle=color;c.fillRect(pos.x,pos.y,pos.w,14);c.fillRect(pos.x+pos.w-25,pos.y+pos.h-25,25,25)}
    if(classic){c.strokeStyle='rgba(247,244,255,.27)';c.lineWidth=1;c.strokeRect(pos.x+9,pos.y+9,pos.w-18,pos.h-18)}
    if(sketch){c.strokeStyle='rgba(247,244,255,.35)';c.lineWidth=1;c.beginPath();c.moveTo(pos.x+5,pos.y-5);c.lineTo(pos.x+pos.w+3,pos.y+7);c.moveTo(pos.x+pos.w-4,pos.y+pos.h+7);c.lineTo(pos.x-3,pos.y+pos.h-2);c.stroke()}
-   const img=opt.getIcon(item.icon);if(img?.im){const ar=img.ar||1,w=ar>1?150:150*ar,h=ar>1?150/ar:150;
-    if(struct)c.filter='grayscale(1) contrast(1.2)';c.drawImage(img.im,pos.x+pos.w/2-w/2,pos.y+55+(150-h)/2,w,h);if(struct)c.filter='none'}
-   else{c.strokeStyle=color;c.lineWidth=4;c.strokeRect(pos.x+64,pos.y+65,pos.w-128,137)}
+   const img=opt.getIcon(item.icon);if(img?.im){const ar=img.ar||1,sz=vertical?138:150,w=ar>1?sz:sz*ar,h=ar>1?sz/ar:sz,center=vertical?(item===g.left?pos.x+123:pos.x+pos.w-123):pos.x+pos.w/2;
+    if(struct)c.filter='grayscale(1) contrast(1.2)';c.drawImage(img.im,center-w/2,pos.y+(vertical?42:55)+(sz-h)/2,w,h);if(struct)c.filter='none'}
+   else{c.strokeStyle=color;c.lineWidth=4;c.strokeRect(pos.x+(vertical?48:64),pos.y+55,vertical?154:pos.w-128,vertical?115:137)}
    const txt=item.word.toLocaleUpperCase(),font=(paper?'700 34px Lora,Georgia,serif':struct?'600 32px Georgia,serif':'700 36px Hind,sans-serif');
    c.font=font;c.fillStyle=ink;c.textAlign='center';c.textBaseline='middle';
-   let label=txt;while(c.measureText(label).width>pos.w-30&&label.length>1)label=label.slice(0,-1);c.fillText(label,pos.x+pos.w/2,pos.y+296);
-   c.fillStyle=color;c.fillRect(pos.x+45,pos.y+342,pos.w-90,3);c.restore()
+   let label=txt;const max=vertical?300:pos.w-30;while(c.measureText(label).width>max&&label.length>1)label=label.slice(0,-1);if(!opt.captionsOn)c.fillText(label,vertical?(item===g.left?pos.x+420:pos.x+176):pos.x+pos.w/2,pos.y+(vertical?110:296));
+   c.fillStyle=color;c.fillRect(vertical?pos.x+250:pos.x+45,pos.y+(vertical?172:342),vertical?pos.w-325:pos.w-90,3);c.restore()
   }
   card(left,g.left,accent,1);card(right,g.right,second,Math.max(.08,reveal));
   c.strokeStyle=second;c.fillStyle=second;c.lineWidth=struct?2:5;c.lineCap='round';
   if(g.kind==='contrast'){
-   c.font='700 32px Hind,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('VS',360,385)
+   c.font='700 32px Hind,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('VS',360,391)
   }else{
-   const x=342+reveal*35,y=390;c.beginPath();c.moveTo(338,y);c.lineTo(x,y);c.stroke();
-   if(reveal>.7){c.beginPath();c.moveTo(371,y-10);c.lineTo(380,y);c.lineTo(371,y+10);c.stroke()}
+   const x=vertical?360:342+reveal*35,y=vertical?360+62*reveal:390;c.beginPath();c.moveTo(vertical?360:338,vertical?360:y);c.lineTo(x,y);c.stroke();
+   if(reveal>.7){c.beginPath();if(vertical){c.moveTo(349,410);c.lineTo(360,423);c.lineTo(371,410)}else{c.moveTo(371,y-10);c.lineTo(380,y);c.lineTo(371,y+10)}c.stroke()}
   }
   /* The cue is a relationship diagram, not a substitute for the existing editable captions. */
   c.restore();return true;

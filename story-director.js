@@ -5,6 +5,43 @@ const STOP=new Set('है हैं था थी थे का की के �
 const cl=w=>String(w).normalize('NFC').toLowerCase().replace(/^[^\p{L}\p{N}₹$]+|[^\p{L}\p{N}%]+$/gu,'');
 const CON=/^(लेकिन|मगर|परंतु|जबकि|but|however|while|vs|versus|lekin|magar|jabki)$/i,SEQ=/^(फिर|then|next|phir|अगला)$/i,AND=/^(और|and|aur|तथा|&)$/i,CUR=/^(रुपये|रुपए|rupees|rupaye|rs|₹|inr)$/i;
 const ROLE={hook:'Hook',takeaway:'Takeaway',problem:'Problem',example:'Example',body:'Point'};
+/* Explainer choices are suggestions, not claims about unspoken events. This
+   classifier also accepts a plain string for the offline 20-scene review. */
+const RX={
+ cta:/\b(?:follow|subscribe|comment|share|save this|join us|let me know)\b|फॉलो|सब्सक्राइब|कमेंट|शेयर|साझा करें/iu,
+ chapter:/\b(?:number|no\.?|step|tip|tool)\s*(?:[1-9]|one|two|three|four|five|first|second|third)\b|\b(?:first|second|third)\b|^(?:पहला|दूसरा|तीसरा)\b|नंबर\s*[१-९]/iu,
+ contrast:/\b(?:but|versus|vs\.?|whereas|without|with|rather than|instead of|before.+after)\b|लेकिन|बनाम|इसके बजाय|पहले.+अब/iu,
+ flow:/\b(?:then|next|after that|process|steps?|first.+then|how to)\b|फिर|उसके बाद|कदम|प्रक्रिया|कैसे/iu,
+ tech:/\b(?:app|phone|call|chat|notification|message|mobile|computer|website|browser|code|tabs?|emails?|docs?)\b|फोन|कॉल|चैट|ऐप|लैपटॉप|मेल|संदेश/iu,
+ people:/\b(?:person|people|family|friend|child|mother|father|teacher|doctor|shop|clinic|village|office|customer|boss)\b|लोग|बच्चे|मां|पापा|डॉक्टर|दुकान|गाँव|परिवार|दोस्त/iu,
+ money:/\b(?:money|cost|price|salary|income|spent|save|paisa|kharcha|naukri|rupaye)\b|पैसे|कीमत|रुपये|खर्च|वेतन/iu,
+ roman:/\b(?:paisa|kaam|naukri|customer|kharcha|rupaye|pehle|ab|phir|lekin|dost|dukaan|kitab|samay)\b/iu
+};
+const words=s=>String(s||'').trim().split(/\s+/).filter(Boolean);
+function classifyText(text,i=0,n=1,info={}){
+ const t=String(text||''),ws=words(t),number=info.number||null;
+ const chunks=t.split(/[,;]|\s+and\s+|\s+aur\s+|\s+और\s+/iu).map(x=>x.trim()).filter(Boolean);
+ const ids=ws.map(w=>{try{return libHit(w)}catch(e){return -1}}).filter(x=>x>=0);
+ const concrete=ids.length>0||RX.tech.test(t)||RX.money.test(t),isChapter=RX.chapter.test(t),hasPair=!!info.sides||RX.contrast.test(t);
+ let treat='statement',style='explainer',reason='caption-led, no invented visual';
+ if(i===n-1&&RX.cta.test(t)){treat='cta';reason='explicit call to action'}
+ else if(isChapter){treat='titlecard';reason='spoken chapter marker'}
+ else if(hasPair){treat='compare';reason='spoken contrast'}
+ else if(info.values?.length>=2&&/\bfrom\b.{0,65}\bto\b|से.{0,65}तक/iu.test(t)){treat='counter';reason='explicit from/to amounts'}
+ else if(info.seq?.length>=2){treat='flow';reason='explicit year sequence'}
+ else if(number){treat='counter';reason='spoken number; no fabricated start'}
+ else if(info.steps?.length>=2||RX.flow.test(t)){treat='flow';reason='spoken sequence'}
+ else if(ids.length>=4&&chunks.length>=4){treat='floatchips';reason='multiple recognized subjects'}
+ else if(info.items?.length>=3||chunks.length>=3){treat='list';reason='separated spoken items'}
+ else if(RX.tech.test(t)){treat=/\b(?:website|browser|code|tabs?|docs?)\b|वेबसाइट|कोड/iu.test(t)?'window':'phone';reason='explicit technology subject'}
+ else if(RX.people.test(t)){treat='miniscene';style='story';reason='person/place narrative'}
+ else if(concrete){treat='metaphor';reason='explicit recognizable subject'}
+ else{treat='statement';reason='unknown concept: typography fallback'}
+ if(i===0&&!isChapter&&!hasPair&&!number&&!RX.tech.test(t)&&!RX.people.test(t))treat=concrete?'metaphor':'statement';
+ if(RX.people.test(t)&&!hasPair&&!number&&!isChapter&&!RX.flow.test(t)&&!RX.tech.test(t))style='story';
+ const key=ws.find(w=>{try{return libHit(w)>=0}catch(e){return false}})||ws.find(w=>!STOP.has(cl(w)))||ws[0]||'•';
+ return{style,treat,reason,key,topic:key,items:chunks.slice(0,5),hasGroundedIcon:ids.length>0,review:!concrete&&treat!=='titlecard'&&treat!=='cta'}
+}
 function plan(i,n){
   const tk=sents[i].split(/\s+/).filter(Boolean),L=tk.length,cs=tk.map(cl);
   const pw=(a,b)=>tk.slice(a,b).map(w=>w.replace(/[,.;:!?।—"“”]+$/g,'')).join(' ');
@@ -27,8 +64,15 @@ function plan(i,n){
   const it=segs(AND);if(it.length>=3)d.items=it.slice(0,5);
   const st=segs(SEQ);if(st.length>=2&&cs.some((c,k)=>SEQ.test(c)&&!/^(bhi|भी)$/.test(cs[k+1]||'')))d.steps=st.slice(0,5);
   const treat=d.values?'chart':d.seq?'timeline':d.sides?'compare':d.items?'list':d.steps?'flow':d.number?'counter':(role==='hook'&&L<=9)||role==='takeaway'?'kinetic':i%3===0?'depth':'figure';
-  return{key,role,roleName:ROLE[role],flip:i%2,comp:i,tr:2,data:d,eff:{treat,layers:{type:true,deco:true,graphic:true,char:true,depth:true}}};
+  const directed=classifyText(sents[i],i,n,d);
+  /* Avoid adjacent identical Explainer arrangements without inventing content. */
+  if(i>0&&directed.style==='explainer'){
+   const prev=classifyText(sents[i-1],i-1,n,{});
+   if(prev.style==='explainer'&&prev.treat===directed.treat&&['statement','metaphor','phone','window','floatchips'].includes(directed.treat))
+    directed.treat=directed.hasGroundedIcon?'metaphor':directed.treat==='statement'?'titlecard':'statement';
+  }
+  return{key,role,roleName:ROLE[role],flip:i%2,comp:i,tr:2,data:d,style:directed.style,explainer:directed,eff:{treat,layers:{type:true,deco:true,graphic:true,char:true,depth:true}}};
 }
 
-root.StoryDirector={plan};
+root.StoryDirector={plan,classifyText};
 })(window);

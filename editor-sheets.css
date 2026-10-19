@@ -53,3 +53,12 @@ main.minimalist-canvas-bg .speech-setup strong{display:block;font-size:16px}
 main.minimalist-canvas-bg .speech-setup p{line-height:1.5;margin:8px 0 12px}
 main.minimalist-canvas-bg .speech-setup button{min-height:44px}
 @media(max-width:600px){main.minimalist-canvas-bg .speech-setup .bar button{flex:1 1 100%;width:100%}}
+/* Phase 4 prop review stays folded until requested, including narrow scene rows. */
+.director-review .prop-inspector{margin:8px 0;padding:8px;border:1px solid rgba(127,140,150,.25);border-radius:8px;max-width:100%;box-sizing:border-box}
+.director-review .prop-inspector summary{overflow-wrap:anywhere}
+.director-review .prop-inspector p{margin:8px 0;overflow-wrap:anywhere}
+.director-review .prop-inspector select{display:block;min-height:40px;max-width:100%;width:min(100%,320px);box-sizing:border-box}
+/* Phase 5: compact thumb-friendly sliders, without changing scene/editor hierarchy. */
+main.minimalist-canvas-bg #cap .capg input[type=range]{min-height:42px;touch-action:pan-x}
+main.minimalist-canvas-bg #captionPlacementHint{font-size:12px;line-height:1.4;max-width:38ch}
+@media(max-width:600px){main.minimalist-canvas-bg .capg{min-width:0}main.minimalist-canvas-bg #cap .capg label{min-width:0}}
