@@ -62,3 +62,12 @@ main.minimalist-canvas-bg .speech-setup button{min-height:44px}
 main.minimalist-canvas-bg #cap .capg input[type=range]{min-height:42px;touch-action:pan-x}
 main.minimalist-canvas-bg #captionPlacementHint{font-size:12px;line-height:1.4;max-width:38ch}
 @media(max-width:600px){main.minimalist-canvas-bg .capg{min-width:0}main.minimalist-canvas-bg #cap .capg label{min-width:0}}
+/* Mobile scene navigator and a folded, touch-friendly timing row. */
+main.minimalist-canvas-bg #scenePrev,main.minimalist-canvas-bg #sceneNext{min-height:44px}
+main.minimalist-canvas-bg #sceneNavLabel{font-variant-numeric:tabular-nums;min-width:82px;text-align:center}
+main.minimalist-canvas-bg #ls li:not(.scene-expanded) .scene-timing{display:none}
+main.minimalist-canvas-bg .scene-timing{display:flex;align-items:end;flex-wrap:wrap;gap:8px;padding:8px;border:1px solid var(--grid-line-color);border-radius:9px;min-width:0}
+main.minimalist-canvas-bg .scene-timing button{min-height:44px;padding:6px 10px}
+main.minimalist-canvas-bg .scene-timing label{font-size:12px;flex:1 0 116px;min-width:0}
+main.minimalist-canvas-bg .scene-timing input{min-height:44px;width:100%;max-width:140px;padding:7px;border:1px solid var(--grid-line-color);border-radius:7px;background:var(--bg-dark-charcoal);color:var(--text-primary-white);font:inherit;font-variant-numeric:tabular-nums}
+@media(max-width:759px){main.minimalist-canvas-bg #ls{max-height:none;overflow:visible}main.minimalist-canvas-bg .scene-timing button{flex:1 1 110px}main.minimalist-canvas-bg #scenePrev,main.minimalist-canvas-bg #sceneNext{flex:1 1 95px}main.minimalist-canvas-bg #sceneNavLabel{order:0}}

@@ -6,7 +6,7 @@ const FONT='"Iowan Old Style","Baskerville",Georgia,"Noto Sans Devanagari","Nirm
 const iconCache=new Map();let noise=null,silhouette=null;
 const clamp=x=>Math.max(0,Math.min(1,x));
 /* Exact CSS cubic-bezier(.25,1,.5,1), solved at the supplied timestamp. */
-function ease(x){x=clamp(x);let l=0,r=1;for(let j=0;j<10;j++){const q=(l+r)/2,p=3*.25*q*(1-q)*(1-q)+3*.5*q*q*(1-q)+q*q*q;if(p<x)l=q;else r=q}const q=(l+r)/2;return 3*q*(1-q)*(1-q)+3*q*q*(1-q)+q*q*q}
+function ease(x){x=clamp(x);if(x<=0)return 0;if(x>=1)return 1;let l=0,r=1;for(let j=0;j<10;j++){const q=(l+r)/2,p=3*.25*q*(1-q)*(1-q)+3*.5*q*q*(1-q)+q*q*q;if(p<x)l=q;else r=q}const q=(l+r)/2;return 3*q*(1-q)*(1-q)+3*q*q*(1-q)+q*q*q}
 function clean(w){return String(w||'').normalize('NFC').toLowerCase().replace(/^[^\p{L}\p{N}₹]+|[^\p{L}\p{N}₹]+$/gu,'')}
 const common=new Set('a an the and or but to of for with is are was were i you we it this that in on at by from as not do did can will be have has he she they your my our aap aur hai hain ka ki ke se ko mein यह वह और है हैं का की के से को में आप मैं हम तो पर'.split(' '));
 const abstract=/^(idea|change|believe|belief|meaning|mindset|future|freedom|trust|important|better|success|hope|confidence|purpose|value|possible|imagine|सोच|भरोसा|सफलता|विश्वास|उम्मीद|आज़ादी|भविष्य|विचार|बदलाव)$/iu;
@@ -19,7 +19,7 @@ const procedural=[
  {shape:'focus',test:/(focus|look|notice|attention|see|observe|ध्यान|देख|नज़र)/iu},
  {shape:'time',test:/(minute|second|hour|time|wait|delay|समय|मिनट|घंट|इंतज़ार)/iu}
 ];
-function matches(w,phrase){return phrase.split(/\s+/).some(v=>v===w||(w.length>3&&v.length>3&&(w.startsWith(v)||v.startsWith(w))));}
+function matches(w,phrase){return phrase.split(/\s+/).some(v=>v===w||(/^[a-z]{4,}$/i.test(v)&&[v+'s',v+'es',v+'ed',v+'ing'].includes(w)));}
 /* Resolution does not guess an image from a generic word. One marker always returns one tier. */
 function resolve(word,context,assets){const w=clean(word);if(!w)return {tier:'type',word:String(word||context||'•')};
  if(number.test(w))return {tier:'procedural',shape:'number',word:String(word)};
@@ -28,7 +28,7 @@ function resolve(word,context,assets){const w=clean(word);if(!w)return {tier:'ty
   for(const [id,terms] of (assets.concepts||[]))if(assets.scenes&&assets.scenes[id]&&terms.some(v=>matches(w,v)))return {tier:'library',source:'scene',id,word:String(word)};
  }
  for(const p of procedural)if(p.test.test(w))return {tier:'procedural',shape:p.shape,word:String(word)};
- if(!abstract.test(w)&&/^[\p{L}]{4,}$/u.test(w)&&!common.has(w))return {tier:'procedural',shape:'tracker',word:String(word)};
+ /* Unmatched concepts abstain rather than drawing an unrelated tracker. */
  return {tier:'type',word:String(word)};
 }
 function libraryIcon(index,assets){if(iconCache.has(index))return iconCache.get(index);
@@ -87,6 +87,41 @@ function rhythm(c,words,index,time){if(!words.length)return;c.save();c.strokeSty
  const n=words.length,left=98,width=524,y=619;c.beginPath();c.moveTo(left,y);c.lineTo(left+width,y);c.stroke();
  words.forEach((w,k)=>{const x=left+(k+.5)*width/n;c.fillRect(x-1,y-3,2,6)});
  const x=left+(Math.max(0,index)+.5)*width/n;c.fillRect(x-3,y-6,6,12);c.restore()}
+/* Source-limited editorial diagrams: one primary composition per scene. Never
+   invent amounts, map points, medical detail or a relationship absent from speech. */
+const sourceKinds=new Set(['analogycard','venndiagram','conceptmap','mindmap','decisiontree','barchart','linechart','piechart','scalecompare','matrix2x2','historytimeline','numberline','formulabuilder','mythfactflip','truefalse','quizthreeoption','flashcardflip','mnemonicletters','mappin','anatomydiagram','statechange','crosssection']);
+const selfKinds=new Set(['habitloop','streakcalendar','progressring','daytimeline','habitgrid','batterymeter','compoundcurve','beforeaftersplit','thinkvsreality','balancescale','checklisttick','routineclock']);
+function sourcePlan(data){if(data.treatment!=='auto'||data.pin)return null;const text=data.text||'';
+ const edu=root.EducationalComponents?.parse(text);if(edu&&!edu.reuse&&sourceKinds.has(edu.id))return{family:'education',plan:edu};
+ const prop=root.MetaphorProps?.plan(text);if(prop)return{family:'prop',plan:prop};
+ const self=root.SelfImprovement?.parse(text);if(self&&selfKinds.has(self.id))return{family:'self',plan:self};
+ const graph=root.SceneGraph?.fromText(text);if(graph&&!graph.review&&['definition','cause','cycle','hierarchy'].includes(graph.kind)&&graph.nodes?.length>=2)return{family:'graph',plan:graph};
+ return null
+}
+function sourceAt(data,index){const at=data.words?.[Math.max(0,index)]?.s;if(at==null)return 0;const remain=Math.max(.08,(data.end||at+1)-at);return ease((data.time-at)/Math.min(data.motion==='calm'?.65:.32,remain*.85))}
+function sourceText(c,v,x,y,w=160,px=29){v=String(v||'').split(/\s+/).slice(0,4).join(' ').slice(0,38);if(!v)return;title(c,v,x,y,w,px,PAPER)}
+function sourceBox(c,x,y,w,h,q){if(q<=0)return;c.save();c.globalAlpha=.18+.82*q;c.strokeStyle=PAPER;c.lineWidth=1.4;c.strokeRect(x+.5,y+.5,w-1,h-1);c.fillStyle='rgba(247,244,255,.025)';c.fillRect(x+1,y+1,w-2,h-2);c.fillStyle=PAPER;c.fillRect(x+11,y+13,31*q,2);c.restore()}
+function sourceVisual(c,data,source){const p=source.plan,kind=p.id||p.kind,labels=(p.labels||p.nodes?.map(n=>n.label)||[]),idx=(p.at||p.nodes?.map(n=>n.at)||[]);c.save();c.beginPath();c.rect(48,110,624,548);c.clip();
+ c.fillStyle='rgba(247,244,255,.42)';c.fillRect(70,133,34,2);c.font='500 22px '+FONT;c.textAlign='left';c.fillText((source.family==='prop'?'OBJECT':source.family==='education'?'EXPLAIN':'STRUCTURE'),115,141);
+ if(source.family==='prop'){root.MetaphorProps.paintGlyph(c,p,{skin:'structural',t:data.time,start:data.start,end:data.end,words:data.words,calm:data.motion==='calm'},360,349,.85);if(!data.captionsOn)sourceText(c,p.term,360,570,520,39)}
+ else if(source.family==='education'&&['barchart','linechart','piechart','scalecompare'].includes(kind)&&p.values?.length>=2){const rows=p.values.slice(0,5),max=Math.max(1,...rows.map(v=>Math.abs(v.num))),n=rows.length;sourceBox(c,76,184,568,343,1);
+  if(kind==='piechart'){let angle=-Math.PI/2;const total=rows.reduce((sum,v)=>sum+Math.max(0,v.num),0)||1;rows.forEach((v,j)=>{const q=sourceAt(data,p.valueAt?.[j]??idx[j]??j),span=Math.PI*2*Math.max(0,v.num)/total*q;c.strokeStyle=['#F7F4FF','#C0BDC7','#8D8C94','#A9A8B0','#77777F'][j];c.lineWidth=31;c.beginPath();c.arc(273,344,104,angle,angle+span);c.stroke();angle+=Math.PI*2*Math.max(0,v.num)/total});}
+  else if(kind==='linechart'){c.strokeStyle=PAPER;c.lineWidth=2;c.beginPath();let drawn=0;rows.forEach((v,j)=>{const q=sourceAt(data,p.valueAt?.[j]??idx[j]??j);if(!q)return;const x=132+j*455/Math.max(1,n-1),y=451-180*(v.num/max)*q;drawn++?c.lineTo(x,y):c.moveTo(x,y)});c.stroke()}
+  else rows.forEach((v,j)=>{const q=sourceAt(data,p.valueAt?.[j]??idx[j]??j);if(!q)return;const x=124+j*(478/n),h=(kind==='scalecompare'?Math.sqrt(v.num/max):v.num/max)*192*q;c.fillStyle=j%2?'#A8A8AE':PAPER;c.fillRect(x,454-h,Math.min(64,478/n-12),h)});
+  rows.forEach((v,j)=>{if(!sourceAt(data,p.valueAt?.[j]??idx[j]??j))return;const x=145+j*(478/n);sourceText(c,v.raw,x,230,Math.max(65,478/n-8),28);sourceText(c,v.label,x,494,Math.max(75,478/n-8),25)})}
+ else if(source.family==='education'&&kind==='historytimeline'&&p.values?.length>=2){const rows=p.values.slice(0,4);c.strokeStyle=PAPER;c.lineWidth=2;line(c,118,359,599,359,1);rows.forEach((v,j)=>{const q=sourceAt(data,idx[j]??j),x=135+j*445/Math.max(1,rows.length-1);if(!q)return;c.fillStyle=PAPER;c.fillRect(x-5,354,10,10);sourceText(c,v.raw,x,299,110,34);sourceText(c,v.event,x,423,130,24)})}
+ else if(source.family==='self'&&['progressring','streakcalendar','batterymeter','compoundcurve'].includes(kind)){const raw=p.values?.[0]||'',num=Number(String(raw).replace(/[^0-9.]/g,''));const valid=Number.isFinite(num)&&raw!=='';const q=sourceAt(data,idx[0]??0);c.strokeStyle='rgba(247,244,255,.25)';c.lineWidth=2;c.beginPath();c.arc(360,352,138,0,7);c.stroke();c.strokeStyle=PAPER;c.lineWidth=5;c.beginPath();c.arc(360,352,138,-Math.PI/2,-Math.PI/2+Math.PI*2*(valid&&String(raw).includes('%')?Math.min(1,num/100):.7)*q);c.stroke();if(valid)sourceText(c,String(raw),360,354,320,65);else sourceText(c,labels[0],360,353,400,35)}
+ else{const items=labels.slice(0,kind==='mindmap'||kind==='matrix2x2'?4:3);if(!items.length){c.restore();return false}const isPair=['analogycard','venndiagram','conceptmap','beforeaftersplit','thinkvsreality','statechange','mythfactflip','flashcardflip','formulabuilder'].includes(kind),n=items.length;
+  items.forEach((v,j)=>{let x,y,w,h;if(isPair){w=241;h=192;x=j%2?390:89;y=271}else if(n===1){x=146;y=257;w=428;h=232}else if(n===2){x=89+j*280;y=267;w=244;h=206}else{x=89+(j%3)*185;y=j%2?301:236;w=160;h=185}const q=sourceAt(data,idx[j]??j);if(!q)return;sourceBox(c,x,y,w,h,q);sourceText(c,v,x+w/2,y+h/2,w-22,n>2?27:34)});
+  if(n>=2){c.strokeStyle='rgba(247,244,255,.72)';c.lineWidth=2;const y=isPair?367:550;line(c,342,y,377,y,sourceAt(data,idx[1]??1));if(['cycle','habitloop'].includes(kind)){c.beginPath();c.arc(360,369,150,0,Math.PI*1.4*sourceAt(data,idx[1]??1));c.stroke()}}}
+ c.restore();return true}
+/* Landscape companion shows the same spoken subject, never a generic ring. */
+function paintWide(c,data,x,y){const sourced=sourcePlan(data);if(!sourced)return false;const p=sourced.plan,id=p.id||p.kind,idx=p.at||[],values=p.values||[];c.save();c.beginPath();c.rect(839,82,322,210);c.clip();c.strokeStyle=PAPER;c.fillStyle=PAPER;c.lineWidth=2;
+ if(sourced.family==='prop'){root.MetaphorProps.paintGlyph(c,p,{skin:'structural',t:data.time,start:data.start,end:data.end,words:data.words,calm:data.motion==='calm'},x,y+28,.46)}
+ else if(values.length>=2&&['barchart','linechart','piechart','scalecompare'].includes(id)){c.save();c.strokeStyle='rgba(247,244,255,.35)';c.lineWidth=1;c.beginPath();c.moveTo(864,250);c.lineTo(1153,250);c.moveTo(864,142);c.lineTo(864,250);c.stroke();c.restore();const shown=values.filter((v,j)=>sourceAt(data,p.valueAt?.[j]??idx[j]??j)>0);if(shown.length){const max=Math.max(1,...values.map(v=>Math.abs(v.num)));values.slice(0,4).forEach((v,j)=>{const q=sourceAt(data,p.valueAt?.[j]??idx[j]??j);if(!q)return;const xx=875+j*70,hh=120*Math.max(0,v.num)/max*q;c.fillStyle=j%2?'#9999A0':PAPER;c.fillRect(xx,250-hh,32,hh);sourceText(c,v.raw,xx+16,268,57,22)})}}
+ else if(values.length===1&&/[0-9०-९]/u.test(String(values[0]))){const q=sourceAt(data,idx[0]??0);if(q>0)sourceText(c,values[0],x,y+20,280,74)}
+ else{const labels=(p.labels||p.nodes?.map(n=>n.label)||[]).slice(0,2);labels.forEach((v,j)=>{const q=sourceAt(data,idx[j]??j);if(!q)return;sourceBox(c,853+j*153,128,138,115,q);sourceText(c,v,922+j*153,190,125,25)})}
+ c.restore();return true}
 function renderScene(c,data){background(c);const words=data.words||[],t=data.time;
  let active=words.length?0:-1;for(let k=0;k<words.length;k++)if(t>=words[k].s)active=k;
  const w=active>=0?words[active]:null,markerText=w?.w||data.text||'•',start=w?.s??data.start;
@@ -94,6 +129,8 @@ function renderScene(c,data){background(c);const words=data.words||[],t=data.tim
  let libraryPainted=false,drawnMedia=false;
  const useMedia=data.media&&layered.media!==false&&(data.treatment==='media'||data.treatment==='auto'&&['balanced','footage'].includes(data.direction));
  const grammar=data.plan?.grammar;
+ const sourced=!useMedia&&layered.diagram!==false?sourcePlan(data):null;
+ if(sourced&&sourceVisual(c,data,sourced)){rhythm(c,words,active,t);frame(c);return {tier:'source-component',hero:sourced.plan.id||sourced.plan.kind,word:markerText,index:active}}
  if(!data.pin&&!useMedia&&layered.diagram!==false&&grammar?.supported&&
     (data.treatment==='explain'||data.treatment==='auto'&&data.direction!=='stickman')){
   root.VisualGrammar.render(c,grammar,{style:'structural',time:t,revealAt:data.revealAt,calm:data.motion==='calm',captionsOn:data.captionsOn,variant:data.variant||0,getIcon:data.getIcon});
@@ -121,5 +158,5 @@ function caption(c,{cue,time,config,hits,safe}){hits.length=0;if(!config.on||!cu
   c.save();c.beginPath();c.rect(x-2,y-size,x+width+2-(x-2),size*2);c.clip();c.globalAlpha=Math.max(.38,q);c.translate(cx,y+(1-q)*size*.36);c.fillStyle=original%2===0?WHITE:PAPER;c.fillText(word.w,0,0);if(original===active){c.fillRect(-width/2,size*.54,width,1)}c.restore();
   hits.push({si:cue.si,ci:cue.ci,k:cue.idx+original,x0:x-2,x1:x+width+2,y0:y-size*.9,y1:y+size*.9});x+=width+gap
  });c.restore()}
-root.StructuralReel={resolve,renderScene,caption,background,frame,grain,ease};
+root.StructuralReel={resolve,renderScene,caption,background,frame,grain,ease,sourcePlan,sourceAt,paintWide};
 })(window);

@@ -1,4 +1,4 @@
-const C='reel-v33',P=['./','index.html','structural-minimalism.css','editor-sheets.css','reel-renderer-minimalism.js','reel-director.js','visual-grammar.js','visual-layout.js','story-director.js','story-style.js','scene-graph.js','explainer-style.js','self-improvement.js','educational-components.js','metaphor-props.js','explainer-self-test.html','manifest.json','icon.svg','fonts.css'];
+const C='reel-v34',P=['./','index.html','structural-minimalism.css','editor-sheets.css','reel-renderer-minimalism.js','reel-director.js','visual-grammar.js','visual-layout.js','story-director.js','story-style.js','scene-graph.js','explainer-style.js','self-improvement.js','educational-components.js','metaphor-props.js','explainer-self-test.html','manifest.json','icon.svg','fonts.css'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
 const c=await caches.open(C);
 await Promise.all(P.map(u=>c.add(u).catch(()=>{})));

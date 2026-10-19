@@ -144,10 +144,10 @@ button.pri:not(:disabled):hover{filter:brightness(1.07)}
 <canvas id="wv"></canvas>
 <div class="bar">
 <button id="pl" type="button">Play</button>
-<button id="rs" type="button">Restart</button>
+<button id="rs" type="button">Restart</button><button id="scenePrev" type="button" aria-label="Previous scene">← Scene</button><span id="sceneNavLabel" class="mute" aria-live="polite">Scene —</span><button id="sceneNext" type="button" aria-label="Next scene">Scene →</button>
 <button id="visualReview" type="button" aria-pressed="false" title="Mute and hide captions in the preview only">◉ Visual-only review</button>
 <span id="tm" class="mute">0.00s</span>
-<span class="mute">Drag a marker to move a scene boundary. Tap the waveform to seek.</span>
+<span class="mute">Tap a scene to play it. Expand it for duration and change previews; you can also drag waveform cuts.</span>
 </div>
 <p id="visualReviewNote" class="mute" hidden>Visual-only review: preview audio and captions are hidden. Video exports and caption files are unchanged. Can you follow the idea from the pictures?</p>
 </section>
@@ -1189,6 +1189,7 @@ function drawWide(t,cap){
   else{c.strokeRect(820,62,360,250);c.strokeRect(828,70,344,234)}
   const wideProp=(story()||explainer())&&!mus&&!((window.OVR||[])[i])&&!ready(media[i])&&sceneLayer(i,'diagram')&&useProp(i)?propFor(i):null;
   if(wideProp){MetaphorProps.paintGlyph(c,wideProp,{skin:story()?'story':'explainer',night:explainer()&&$('#expTheme').value==='night',t:cap?.vt??correctedTime(i,t),start:a,end:b,words:wordsT(i),calm:$('#motion').value==='calm'},x,y+32,.69)}
+  else if(minimal()){StructuralReel.paintWide(c,{treatment:sceneCfg(i).treatment,pin:(window.OVR||[])[i],text:sents[i],time:cap?.vt??correctedTime(i,t),start:a,end:b,words:wordsT(i),motion:$('#motion').value},x,y)}
   else if(asset?.im){const sz=165,ar=asset.ar||1,w=ar>1?sz:sz*ar,h=ar>1?sz/ar:sz;
    c.globalAlpha=.2+.8*phase;c.translate(x,y+29+(1-phase)*($('#motion').value==='calm'?13:50));if(minimal())c.filter='grayscale(1)';c.drawImage(asset.im,-w/2,-h/2,w,h);c.filter='none'}
   else{ /* Abstain from inventing a literal picture for unknown narration. */
@@ -1270,11 +1271,24 @@ let lastTm='',lastF=0,emaMs=8;
 function frame(){
   const t=playing?getT():off;drawWave(t);drawPrev(t);
   {const tt=buf?fmt(t)+' / '+fmt(buf.duration):'0.00s';if(tt!==lastTm){lastTm=tt;$('#tm').textContent=tt}}
+  if(!buf||!sents.length){$('#sceneNavLabel').textContent='Scene —';$('#scenePrev').disabled=true;$('#sceneNext').disabled=true}
   if(buf&&sents.length){
-    const i=idxAt(t);
+    const i=idxAt(t),label='Scene '+(i+1)+' / '+sents.length;if($('#sceneNavLabel').textContent!==label)$('#sceneNavLabel').textContent=label;$('#scenePrev').disabled=i===0;$('#sceneNext').disabled=i===sents.length-1;
     if(i!==lastIdx){const L=$('#ls').children;if(L[lastIdx]&&L[lastIdx].firstChild)L[lastIdx].firstChild.classList.remove('on');if(L[i]&&L[i].firstChild)L[i].firstChild.classList.add('on');const ol=$('#ls');if(!playing||ol.matches(':hover')===false)ol.scrollTop=Math.max(0,L[i].offsetTop-ol.clientHeight/3);lastIdx=i}
   }
 }
+/* Scene length edits move the existing shared cut, never stretch voice or invent audio.
+   The adjacent scene changes too; edited word cues remain available for review. */
+function setSceneDuration(i,seconds){
+ if(!buf||sents.length<2||exporting||!Number.isFinite(+seconds)){setSt('Load audio and choose a valid scene length.');return false}
+ const wanted=+seconds,cut=i<sents.length-1?i:i-1,prior=cut?cuts[cut-1]:0,following=cut<cuts.length-1?cuts[cut+1]:buf.duration;
+ const value=i<sents.length-1?prior+wanted:buf.duration-wanted;
+ if(wanted<.45||value<=prior+.44||value>=following-.44){setSt('Scene length must leave at least 0.45 s for both scenes. No change was made.');return false}
+ if(playing)stop();cuts[cut]=Math.round(value*1000)/1000;off=Math.max(0,Math.min(buf.duration-.01,(i?cuts[i-1]:0)+.08));
+ refresh();setSt('Scene '+(i+1)+' now '+(bounds(i)[1]-bounds(i)[0]).toFixed(2)+' s. Shared cut moved; review nearby caption and word timing.');return true
+}
+function jumpScene(delta){if(!buf||!sents.length)return;const next=Math.max(0,Math.min(sents.length-1,idxAt(playing?getT():off)+delta));if(playing)stop();window.OPEN_SCENE=next;renderList();seek(bounds(next)[0]+.02)}
+$('#scenePrev').onclick=()=>jumpScene(-1);$('#sceneNext').onclick=()=>jumpScene(1);
 function refresh(){buildTL();renderList();json();frame()}
 
 /* ---------- playback ---------- */
@@ -1891,6 +1905,12 @@ const _rl=renderList;renderList=function(){_rl();
     sel.value=OVR[i]||'';if(OVR[i])li.classList.add('chosen');
     sel.onchange=()=>{OVR[i]=sel.value||undefined;buildTL();renderList();json();frame()};rw.prepend(sel);
     const cfg=sceneCfg(i),plan=scenePlan(i);
+    const timing=document.createElement('div');timing.className='scene-timing';const [sceneStart,sceneEnd]=bounds(i);
+    const playScene=document.createElement('button');playScene.type='button';playScene.textContent='▶ Play scene';playScene.onclick=()=>play(sceneStart,sceneEnd);timing.appendChild(playScene);
+    if(i<sents.length-1){const transition=document.createElement('button');transition.type='button';transition.textContent='⤴ Preview change';transition.onclick=()=>play(Math.max(0,cuts[i]-.45),Math.min(buf.duration,cuts[i]+.65));timing.appendChild(transition)}
+    if(sents.length>1){const label=document.createElement('label');label.textContent='Duration (seconds)';const shorter=document.createElement('button'),longer=document.createElement('button'),input=document.createElement('input');shorter.type=longer.type='button';shorter.textContent='− 0.25';longer.textContent='+ 0.25';input.type='number';input.min='0.45';input.step='0.05';input.value=(sceneEnd-sceneStart).toFixed(2);input.setAttribute('aria-label','Duration in seconds for scene '+(i+1));input.onchange=()=>{if(!setSceneDuration(i,Number(input.value)))input.value=(bounds(i)[1]-bounds(i)[0]).toFixed(2)};shorter.onclick=()=>setSceneDuration(i,Math.round(((bounds(i)[1]-bounds(i)[0])-.25)*100)/100);longer.onclick=()=>setSceneDuration(i,Math.round(((bounds(i)[1]-bounds(i)[0])+.25)*100)/100);label.appendChild(input);timing.append(shorter,label,longer)}
+    li.appendChild(timing);
+
     const tr=document.createElement('select');tr.setAttribute('aria-label','Treatment for scene '+(i+1));
     [['auto','Auto treatment'],...(plan.grammar?.supported||cfg.treatment==='explain'?[['explain',plan.grammar?.supported?'Explain spoken relationship':'Explanation unavailable — change treatment']]:[]),['hook','Hook / question'],['demo','Stickman demo'],['flow','Flow diagram'],['steps','Progressive list'],['comparison','Comparison'],['media','Media + annotations'],['obstacle','Obstacle'],['focus','Focus'],['payoff','Payoff'],['typography','Script-led type (safe fallback)']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;tr.appendChild(o)});
     tr.value=cfg.treatment||'auto';tr.onchange=()=>{cfg.treatment=tr.value;json();frame();renderList()};rw.prepend(tr);
@@ -1921,7 +1941,7 @@ const _rl=renderList;renderList=function(){_rl();
     review.appendChild(inspector);li.appendChild(review);
     const layers=document.createElement('div');layers.className='layer-controls';['character','diagram','labels','media'].forEach(k=>{if(k==='media'&&!media[i])return;const l=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=sceneLayer(i,k);check.onchange=()=>{cfg.layers[k]=check.checked;json();frame()};l.append(check,' '+k);layers.appendChild(l)});li.appendChild(layers);
     const reset=document.createElement('button');reset.type='button';reset.textContent='Reset to Auto';reset.onclick=()=>{OVR[i]=undefined;cfg.treatment='auto';delete cfg.propMode;cfg.layers={character:true,diagram:true,labels:true,media:true};buildTL();renderList();json();frame()};rw.appendChild(reset);
-    [-1,1].forEach(d=>{const move=document.createElement('button');move.type='button';move.textContent=d<0?'↑':'↓';move.title='Move scene content '+(d<0?'earlier':'later');move.disabled=i+d<0||i+d>=sents.length;move.onclick=()=>moveScene(i,i+d);rw.appendChild(move)})})};
+    [-1,1].forEach(d=>{const move=document.createElement('button');move.type='button';move.textContent=d<0?'↑':'↓';move.title='Move scene content '+(d<0?'earlier':'later');move.disabled=i+d<0||i+d>=sents.length;move.setAttribute('aria-label',(d<0?'Move scene earlier ':'Move scene later ')+(i+1));move.onclick=()=>moveScene(i,i+d);rw.appendChild(move)})})};
 function moveScene(i,j){
  if(j<0||j>=sents.length)return;
  // Keep existing time slots; move their content and overrides together.
