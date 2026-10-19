@@ -144,28 +144,28 @@ function spokenPair(c,data){if(data.treatment!=='auto'||data.pin||data.layers?.d
 function renderScene(c,data){background(c);const words=data.words||[],t=data.time;
  let active=words.length?0:-1;for(let k=0;k<words.length;k++)if(t>=words[k].s)active=k;
  const w=active>=0?words[active]:null,markerText=w?.w||data.text||'•',start=w?.s??data.start;
- const sceneProgress=root.VisualLayout.progress(t-data.start,data.end-data.start),heroProgress=(data.end-data.start)>5.2?root.VisualLayout.progress((t-data.start)%3.1,3.1):sceneProgress,pulse=clamp((t-start)/.3),asset=data.assets||{},hero=data.pin&&asset.scenes?.[data.pin]?{tier:'library',source:'scene',id:data.pin,word:markerText}:heroFor(data),layered=data.layers||{};
+ const sceneProgress=Math.max(.26,clamp((t-data.start)/Math.max(data.motion==='calm'?1.4:.9,Math.min(2,(data.end-data.start)*.4)))),pulse=clamp((t-start)/.3),asset=data.assets||{},hero=data.pin&&asset.scenes?.[data.pin]?{tier:'library',source:'scene',id:data.pin,word:markerText}:heroFor(data),layered=data.layers||{};
  let libraryPainted=false,drawnMedia=false;
  const useMedia=data.media&&layered.media!==false&&(data.treatment==='media'||data.treatment==='auto'&&['balanced','footage'].includes(data.direction));
  const grammar=data.plan?.grammar;
- const sourced=!useMedia&&layered.diagram!==false?sourcePlan(data):null;
- if(sourced&&!(sourced.family==='prop'&&sourceAt(data,sourced.plan.at)<=0)&&sourceVisual(c,data,sourced)){rhythm(c,words,active,t);frame(c);return {tier:'source-component',hero:sourced.plan.id||sourced.plan.kind,word:markerText,index:active}}
+ const sourced=data.direction==='graphics'&&!useMedia&&layered.diagram!==false?sourcePlan(data):null;
+ if(sourced&&sourceVisual(c,data,sourced)){rhythm(c,words,active,t);frame(c);return {tier:'source-component',hero:sourced.plan.id||sourced.plan.kind,index:active}}
  if(!data.pin&&!useMedia&&layered.diagram!==false&&grammar?.supported&&
     (data.treatment==='explain'||data.treatment==='auto'&&data.direction!=='stickman')){
-  root.VisualGrammar.render(c,grammar,{style:'structural',time:t,revealAt:data.revealAt,calm:data.motion==='calm',captionsOn:data.captionsOn,variant:data.variant||0,getIcon:data.getIcon});
+  root.VisualGrammar.render(c,grammar,{style:'structural',time:t,revealAt:data.revealAt,calm:data.motion==='calm',getIcon:data.getIcon});
   rhythm(c,words,active,t);frame(c);return{tier:'grounded-diagram',word:markerText,hero:grammar.kind,index:active};
  }
  if(!useMedia&&spokenPair(c,data)){rhythm(c,words,active,t);frame(c);return{tier:'spoken-pair',word:markerText,index:active}}
  c.save();c.beginPath();c.rect(46,110,628,535);c.clip();
  if(useMedia)drawnMedia=media(c,data.media,sceneProgress);
  if(!drawnMedia){if(layered.diagram!==false&&data.treatment!=='typography'&&!(data.treatment==='auto'&&data.plan?.composition==='typography'))narrative(c,data.plan,sceneProgress);
-  if(data.treatment==='typography'||data.treatment==='auto'&&data.plan?.composition==='typography'){if(!data.captionsOn)typography(c,markerText,sceneProgress,0);else if(layered.diagram!==false&&hero.tier==='library')libraryPainted=sceneAsset(c,hero,data,heroProgress);else if(layered.diagram!==false&&hero.tier==='procedural')vector(c,hero,heroProgress,0,false);else if(layered.labels!==false&&hero.word!=='•')title(c,clean(hero.word),360,370,430,56)}
-  else if(hero.tier==='library'&&layered.diagram!==false){libraryPainted=sceneAsset(c,hero,{...data,time:data.start+Math.max(.02,t-data.start)},heroProgress);if(!libraryPainted)vector(c,{shape:'focus',word:hero.word},heroProgress,0,!data.captionsOn)}
-  else if(hero.tier==='procedural'&&layered.diagram!==false)vector(c,hero,heroProgress,0,!data.captionsOn);
-  else if(!data.captionsOn)typography(c,hero.word,sceneProgress,0)
+  if(data.treatment==='typography'||data.treatment==='auto'&&data.plan?.composition==='typography')typography(c,markerText,sceneProgress,0);
+  else if(hero.tier==='library'&&layered.diagram!==false){libraryPainted=sceneAsset(c,hero,{...data,time:data.start+Math.max(.02,t-data.start)},sceneProgress);if(!libraryPainted)vector(c,{shape:'focus',word:hero.word},sceneProgress,0)}
+  else if(hero.tier==='procedural'&&layered.diagram!==false)vector(c,hero,sceneProgress,0);
+  else typography(c,hero.word,sceneProgress,0)
  }
  c.restore();
- if(!data.captionsOn&&layered.labels!==false&&(drawnMedia||libraryPainted)){
+ if(layered.labels!==false&&(drawnMedia||libraryPainted)){
   c.save();c.fillStyle='rgba(17,17,17,.88)';c.fillRect(90,547,540,58);title(c,hero.word,360,575,520,35);c.restore()}
  rhythm(c,words,active,t);frame(c);return {tier:hero.tier,word:markerText,hero:hero.word,index:active};
 }
